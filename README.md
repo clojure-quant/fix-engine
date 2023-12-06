@@ -127,6 +127,8 @@ __9__.End your session properly so that clj-fix updates the config file.
 - Give client the option to let clj-fix handle resend requests from the destination.
 - Pass session reject, and order-cancel reject messages to the client.
 
-
+## demos
+- `cd demo && clj -X:demo`
+  this starts the quote harvester and will print a table of the current quotes to the console.
 
 
