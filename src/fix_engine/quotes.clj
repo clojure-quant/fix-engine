@@ -74,25 +74,6 @@
 ;</message>
 
 
-(defonce quote-data-agent (agent {}))
-
-
-(defn quote-data-full [msg-type msg session]
-  (let [venue (:venue session)]
-    (when @(:translate? session)
-      (let [msg (decode-msg venue msg-type msg)
-            instrument (:symbol msg)]
-        (send quote-data-agent assoc instrument msg)))))
-
-(defn quote-sanitize [quote]
-  {:symbol (:symbol quote)
-   :price (:md-entry-price quote)})
-
-
-(defn snapshot []
-  (let [data @quote-data-agent
-        quotes (vals data)]
-    (map quote-sanitize quotes)))
 
 ;; security list
 
@@ -101,13 +82,5 @@
     [:security-list-request-id (str sub-id)
      :security-list-type "0"]))
 
-(comment
-  @quote-data-agent
-  (snapshot)
-   ;; => ({:symbol "3", :price 158.828}
-   ;;     {:symbol "1", :price 1.0794} 
-   ;;     {:symbol "2", :price 1.2593})
 
-;   
-  )
  
