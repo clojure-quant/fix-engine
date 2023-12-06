@@ -1,19 +1,19 @@
 (ns demo.quote
   (:require
-   [clj-fix.core :as fix]
-   [clj-fix.quotes :refer [snapshot]]
-   [clj-fix.connection.protocol :as p]
+   [fix-engine.core :as fix]
+   [fix-engine.quotes :refer [snapshot]]
+   [fix-engine.connection.protocol :as p]
    ))
 
 (defn my-handler [key-id reference last-msg new-msg]
+  ; key-id:  :user-callback 
+  ; reference:  #object[clojure.lang.Agent
   (println "my-handler: msg: " new-msg)
   (case (:msg-type new-msg)
-    :logon (println "Logon accepted by" (:sender-comp-id new-msg))
+    :logon (println "Logon accepted by" (:sender-comp-id new-msg) "full: " new-msg)
     :execution-report (println "Execution Report: " new-msg)
     :logout (println "Logged out from" (:sender-comp-id new-msg))
-    (println "unhandled message received: " new-msg)))
-
-
+    (println "fix message received: " new-msg)))
 
 (def client (fix/load-client :ctrader-tradeviewmarkets-quote))
 
@@ -38,6 +38,7 @@
 ;;     {:symbol "6", :price 0.8751})
 
 (p/securitylist client)
+
 ;; on receiving response, it will print out:
 ;; security list:  {:symbol 107, :symbol-name XBR/USD}
 

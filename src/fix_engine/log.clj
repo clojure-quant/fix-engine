@@ -1,4 +1,4 @@
-(ns clj-fix.log)
+(ns fix-engine.log)
 
 (defn log [session-id in-out msg-type msg]
   (let [file-name (str "log/" session-id)]

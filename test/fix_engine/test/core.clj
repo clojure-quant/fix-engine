@@ -1,11 +1,11 @@
-(ns clj-fix.test.core
-  (:use [clj-fix.core])
+(ns fix-engine.test.core
+  (:use [fix-engine.core])
   (:use [clojure.test])
   (:require (clojure [string :as s])
             (lamina [core :as l])
             (aleph [tcp :as a])
             (gloss [core :as g]))
-  (:import clj_fix.core.FixConn))
+  (:import fix_engine.core.FixConn))
 
 (def msgs {
   :logon "8=FIX.4.2\u00019=76\u000135=A\u000134=702\u000149=ABC\u000152=20100130-10:52:40.663\u000156=XYZ\u000195=4\u000196=1234\u000198=0\u0001108=60\u000110=134\u0001"

@@ -1,4 +1,4 @@
-(ns clj-fix.connection.protocol)
+(ns fix-engine.connection.protocol)
 
 (defprotocol Connection
   ; session

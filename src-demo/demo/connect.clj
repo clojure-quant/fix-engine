@@ -1,9 +1,9 @@
 (ns demo.connect
   (:require
-   [clj-fix.core :as fix]
+   [fix-engine.core :as fix]
      ;[clj-fix.connection.protocol]
    )
-  (:use clj-fix.connection.protocol))
+  (:use fix-engine.connection.protocol))
  
 
 client

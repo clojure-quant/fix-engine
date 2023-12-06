@@ -1,9 +1,9 @@
 (ns demo.trade
   (:require
-   [clj-fix.core :as fix]
-     ;[clj-fix.connection.protocol]
+   [fix-engine.core :as fix]
+     ;[fix-engine.connection.protocol]
    )
-  (:use clj-fix.connection.protocol))
+  (:use fix-engine.connection.protocol))
 
 
 (defn my-handler [key-id reference last-msg new-msg]

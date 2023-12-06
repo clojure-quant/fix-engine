@@ -1,4 +1,4 @@
-(ns clj-fix.core
+(ns fix-engine.core
   (:require
    [clojure.string :as s]
    [lamina.core :as l]
@@ -7,9 +7,9 @@
    [cheshire.core :as c]
    [tick.core :as t]
    [fix-translator.core :refer [encode-msg decode-msg extract-tag-value get-msg-type load-spec]]
-   [clj-fix.connection.protocol :as p]
-   [clj-fix.quotes :as quotes]
-   [clj-fix.log :refer [log]]
+   [fix-engine.connection.protocol :as p]
+   [fix-engine.quotes :as quotes]
+   [fix-engine.log :refer [log]]
    )
   (:import (java.util.concurrent Executors Future TimeUnit)))
 
@@ -170,6 +170,13 @@
                                   (decode-msg venue msg-type msg)))
       (update-user session {:msg-type msg-type :report msg}))))
 
+(defn forward-to-user [msg-type msg session]
+  (let [venue (:venue session)]
+    (if @(:translate? session)
+      (update-user session (merge {:msg-type msg-type}
+                                  (decode-msg venue msg-type msg)))
+      (update-user session {:msg-type msg-type :report msg}))))
+
 (defn order-cancel-reject []
   (println "ORDER CANCEL REJECT"))
 
@@ -233,15 +240,17 @@
                 :execution-report (execution-report msg-type m session)
                 :order-cancel-reject (order-cancel-reject)
                 ; quote
-                :quote-data-full (quotes/quote-data-full msg-type m session)
-                :quote-security-list (quotes/quote-security-list msg-type m session)
+                ;:quote-data-full (quotes/quote-data-full msg-type m session)
+                ;:quote-security-list (quotes/quote-security-list msg-type m session)
                 ; unknown
-                :unknown-msg-type (println "UNKNOWN MSG TYPE: " msg-type))))
-
+                :unknown-msg-type (println "UNKNOWN MSG TYPE: " msg-type)
+                (forward-to-user msg-type m session)
+                )))
           (send-msg session :resend-request [:begin-seq-num cur-seq-num
                                              :ending-seq-num 0]))))
 
     (reset! msg-fragment (peek segments))))
+
 
 (defn gen-msg-handler
   "Returns a message handler for the session's channel."

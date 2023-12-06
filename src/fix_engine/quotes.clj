@@ -1,4 +1,4 @@
-(ns clj-fix.quotes
+(ns fix-engine.quotes
   (:require
    [fix-translator.core :refer [decode-msg]]))
 
@@ -95,13 +95,6 @@
     (map quote-sanitize quotes)))
 
 ;; security list
-
-(defn quote-security-list [msg-type msg session]
-  (let [venue (:venue session)]
-    (when @(:translate? session)
-      (let [msg (decode-msg venue msg-type msg)]
-        (println "security list: " msg)
-        ))))
 
 (defn security-list-request []
   (let [sub-id (get-subscription-id)]
