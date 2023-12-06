@@ -14,7 +14,9 @@
     (println "unhandled message received: " new-msg)))
 
 
+
 (def client (fix/load-client :ctrader-tradeviewmarkets-quote))
+
 
 ; reset seq num can be :yes or :no
 (p/logon client my-handler 60 :yes true)

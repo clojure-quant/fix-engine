@@ -34,7 +34,6 @@
 
 (defonce subscription-id (atom 1))
 
-
 (defn get-subscription-id []
   (swap! subscription-id inc))
 

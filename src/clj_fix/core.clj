@@ -28,7 +28,8 @@
 (defrecord Conn [label venue host port sender sender-sub target target-sub
                  username password
                  channel in-seq-num
-                 out-seq-num next-msg msg-fragment translate?])
+                 out-seq-num next-msg msg-fragment translate?
+                 log?])
 
 (declare disconnect)
 
@@ -85,7 +86,6 @@
    messages. If the last message in the collection is complete, it appends an
    empty string."
   [msg]
-  (println "segment-msg: " msg)
   (let [segments (s/split msg msg-identifier)]
     (if (re-find msg-delimiter (peek segments))
       (conj segments "")
@@ -107,11 +107,12 @@
   "Transforms a vector of spec-neutral tags and their values in the form [t0 v0
    t1 v1 ...] into a FIX message, then sends it through the session's channel."
   [session msg-type msg-body]
-  (let [msg (reduce #(apply conj % %2) [[:msg-type msg-type]
+  (let [log? (:log? session)
+        msg (reduce #(apply conj % %2) [[:msg-type msg-type]
                                         (gen-msg-sig session) msg-body])
         encoded-msg (encode-msg (:venue session) msg)]
-    (println "FIX-OUT type:" msg-type " body: " encoded-msg)
-    (log :msg "OUT" msg-type encoded-msg)
+    (when log? 
+       (log :msg "OUT" msg-type encoded-msg))
     (l/enqueue (get-channel session) encoded-msg)))
 
 
@@ -173,8 +174,8 @@
   (println "ORDER CANCEL REJECT"))
 
 (defn logout-accepted [msg-type msg session]
-  (println "logout-accepted!")
-  (log :msg "IN " :logout "logout-accepted")
+  (when (:log? session)
+    (log :msg "IN " :logout "logout-accepted"))
   (let [venue (:venue session)]
     (stop-heartbeats)
     (update-user session {:msg-type msg-type
@@ -202,10 +203,9 @@
   "Segments an inbound block of messages into individual messages, and processes
    them sequentially."
   [id msg]
-  (println "msg-handler id: " (:id id) " msg: " msg)
-  (log :msg "IN1" :raw msg)
   (let [session (get-session id)
         msg-fragment (:msg-fragment session)
+        log? (:log? session)
         segments (segment-msg (str @msg-fragment msg))
         lead-msg (first segments)]
     ; Proceed with processing if there is at least one complete message in
@@ -218,7 +218,8 @@
           (doseq [m (butlast segments)]
             (let [msg-type (get-msg-type (:venue session) m)
                   _ (swap! (:in-seq-num session) inc)]
-              (log :msg "IN " msg-type lead-msg)
+              (when log? 
+                (log :msg "IN " msg-type lead-msg))
               (case msg-type
                 ; admin
                 :logon (logon-accepted msg-type m session)
@@ -246,7 +247,6 @@
   "Returns a message handler for the session's channel."
   [id]
   (fn [msg]
-    (println "gen-msg-handler msg: " msg)
     (msg-handler id msg)))
 
 (defn replace-with-map-val
@@ -290,7 +290,8 @@
     [id msg-handler heartbeat-interval reset-seq-num translate-returning-msgs]
     (let [session (get-session id)]
       (when (not (open-channel? session))
-        (log :msg "---CONNECT---" "" "")
+        (when (:log? session)
+          (log :msg "---CONNECT---" "" ""))
         (connect id translate-returning-msgs))
       (when (= reset-seq-num :yes)
         (reset! (:out-seq-num session) 0)
@@ -373,7 +374,7 @@
 
 (defn new-fix-session
   "Create a new FIX session and add it to sessions collection."
-  [label venue-name host port sender sender-sub target target-sub username password]
+  [label venue-name host port sender sender-sub target target-sub username password log?]
   (let [venue (keyword venue-name)]
     (if (load-spec venue)
       (let [id (keyword (str sender "-" target))]
@@ -382,7 +383,8 @@
             (swap! sessions assoc id (Conn. label venue host port sender sender-sub target target-sub
                                             username password
                                             (atom nil) (atom 0) (atom 0)
-                                            (agent {}) (atom "") (atom nil)))
+                                            (agent {}) (atom "") (atom nil) 
+                                            log?))
             (FixConn. id))
           (error (str "Session " id " already exists. Please close it first."))))
       (error (str "Spec for " venue " failed to load.")))))
@@ -467,11 +469,12 @@
     (let [{:keys [venue host port sender sender-sub target target-sub
                   username password
                   last-logout inbound-seq-num
-                  outbound-seq-num]} config
+                  outbound-seq-num log?]} config
           fix-session (new-fix-session client-label venue host port
                                        sender sender-sub
                                        target target-sub
-                                       username password)]
+                                       username password
+                                       log?)]
       (when (= last-logout (timestamp "yyyyMMdd"))
         (update-fix-session fix-session inbound-seq-num outbound-seq-num))
       fix-session)))
