@@ -81,7 +81,7 @@
   [session]
   (if (not (open-channel? session))
     (do
-      (reset! (:channel session) (a/tcp-client {:host (:host session),
+      (reset! (:channel session) (a/tcp-client {:host (:host session), ; a/tcp-client a/client 
                                                 :port (:port session),
                                                 :frame (g/string :ascii)}))
       (try (get-channel session)
