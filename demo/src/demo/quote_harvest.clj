@@ -24,8 +24,13 @@
               "EUR/CHF"  "NZD/USD" "USD/NOK" 
               "USD/ZAR" "USD/SEK" "USD/MXN"])
 
+(defn on-quote [msg]
+  (println "on-quote: " msg)
+  )
+
 (defn start-harvesting [& _]
   (let [client (fix-api/connect :ctrader-tradeviewmarkets-quote)] 
+    (fix-api/on-quote client on-quote)
     
     ;(p/subscribe client {:symbol "1"})
     ;(p/subscribe client {:symbol "2"})

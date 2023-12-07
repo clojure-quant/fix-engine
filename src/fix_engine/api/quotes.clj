@@ -1,10 +1,9 @@
 (ns fix-engine.api.quotes
   (:require 
     [clojure.java.io :as io]
-    [clojure.edn :as edn])
-  )
+    [clojure.edn :as edn]))
 
-;; symbol mapping 
+;; ctrader symbol mapping 
 
 (def ctrader-symbol-dict
   (-> "fix-dialect/ctrader.edn" io/resource slurp edn/read-string))
@@ -26,10 +25,14 @@
 
 (defonce quote-data-agent (agent {}))
 
-(defn quote-data-full [msg]
+(defn quote-data-full [msg on-quote]
  (let [msg (update msg :symbol ctrader-id-str->symbol)
        instrument (:symbol msg)]
-   (send quote-data-agent assoc instrument msg)))
+   (when on-quote
+     (on-quote msg))
+   (send quote-data-agent assoc instrument msg)
+  
+   ))
 
 (defn quote-sanitize [quote]
   {:symbol (:symbol quote)
