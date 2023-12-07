@@ -107,10 +107,3 @@ IN  :quote-security-list 8=FIX.4.49=292835=y34=249=CSERVER50=QUOTE52=20231
 55=921007=USD/NOK1008=5
 55=931007=USD/ZAR1008=5
 55=941007=USD/MXN1008=4
-
-
-
-
-wilfredo 185   - trabajo
-abdiel 140
-ruben 108
