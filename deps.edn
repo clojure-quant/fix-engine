@@ -15,23 +15,13 @@
           ; time encoding
           ;clj-time/clj-time "0.4.4"] ; tick brings cljc-time
         tick/tick {:mvn/version "0.6.2"} ; replacement for clj-time 
-        ;fix-translator/fix-translator {:mvn/version "1.05"}
-        io.github.clojure-quant/fix-encoding {:git/sha "60cc5c9d65260d1fbef4429b29915a40d8d10190"}
+        io.github.clojure-quant/fix-encoding {:git/sha "0dcc50457715f69445bed7dde28233cdd33e9302"}
         }
 
 
  :aliases
  {:outdated {:extra-deps {com.github.liquidz/antq {:mvn/version "RELEASE"}}
              :main-opts ["-m" "antq.core"]}
-
-  :nrepl {:extra-deps {nrepl/nrepl {:mvn/version "0.9.0"}
-                       cider/cider-nrepl {:mvn/version "0.28.3"}}
-          :main-opts  ["-m" "nrepl.cmdline"]}
-
-  :demo {:extra-paths ["src-demo"]
-         :exec-fn  demo.https/run-webserver}
-
-
 
 ;
   }}

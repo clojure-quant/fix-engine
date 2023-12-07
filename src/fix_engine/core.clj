@@ -13,6 +13,16 @@
    )
   (:import (java.util.concurrent Executors Future TimeUnit)))
 
+
+(def config-path (atom "fix-config/"))
+
+(defn config-filename []
+  (str @config-path "clients.cfg"))
+
+(defn global-filename [n]
+  (str @config-path n ".cfg"))
+
+
 ; FIX messages end with '10=xxx' where 'xxx' is a three-digit checksum
 ; left-padded with zeroes.
 (def ^:const msg-delimiter #"10=\d{3}\u0001")
@@ -409,10 +419,10 @@
 (defn write-session
   "Write the details of a session to a config file for sequence tracking."
   [id]
-  (let [config (c/parse-string (slurp "config/clients.cfg") true)
+  (let [config (c/parse-string (slurp (config-filename)) true)
         session (get-session id)
         client-label (:label session)]
-    (spit "config/clients.cfg" (c/generate-string
+    (spit (config-filename) (c/generate-string
                                 (assoc-in
                                  (assoc-in
                                   (assoc-in config [client-label :last-logout] (timestamp "yyyyMMdd"))
@@ -445,7 +455,7 @@
    client order ids for the session."
   [config-file]
   (let [today (timestamp "yyyyMMdd")
-        file (str "config/" config-file ".cfg")]
+        file (global-filename config-file)]
     (try
       (if-let [config (c/parse-string (slurp file) true)]
         (if (= today (:last-startup config))
@@ -473,7 +483,7 @@
   "Loads client details from a configuration file and creates a new fix
    session from it."
   [client-label]
-  (when-let [config (client-label (c/parse-string (slurp "config/clients.cfg")
+  (when-let [config (client-label (c/parse-string (slurp (config-filename))
                                                   true))]
     (let [{:keys [venue host port sender sender-sub target target-sub
                   username password

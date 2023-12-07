@@ -1,12 +1,13 @@
 (ns fix-engine.api.quotes
   (:require 
+    [clojure.java.io :as io]
     [clojure.edn :as edn])
   )
 
 ;; symbol mapping 
 
 (def ctrader-symbol-dict
-  (-> "dialect/ctrader.edn" slurp edn/read-string))
+  (-> "fix-dialect/ctrader.edn" io/resource slurp edn/read-string))
 
 (defn symbol->ctrader-id [symbol]
   (->> (filter #(= symbol (:symbol %)) ctrader-symbol-dict)
