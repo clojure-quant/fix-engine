@@ -18,22 +18,24 @@
       (println "quote table:")
       (print-table t))))
 
+(def symbols ["EUR/USD" "GBP/USD" "EUR/JPY"
+              "USD/JPY" "AUD/USD" "USD/CHF"
+              "GBP/JPY" "USD/CAD" "EUR/GBP"
+              "EUR/CHF"  "NZD/USD" "USD/NOK" 
+              "USD/ZAR" "USD/SEK" "USD/MXN"])
 
 (defn start-harvesting [& _]
   (let [client (fix-api/connect :ctrader-tradeviewmarkets-quote)] 
-     (p/subscribe client {:symbol "1"})
-     (p/subscribe client {:symbol "2"})
-     (p/subscribe client {:symbol "3"})
-     (p/subscribe client {:symbol "4"})
-     (p/subscribe client {:symbol "5"})
-     (p/subscribe client {:symbol "6"})
-     ;(subscribe client {:symbol "EURUSD"})
-
+    
+    ;(p/subscribe client {:symbol "1"})
+    ;(p/subscribe client {:symbol "2"})
+    (doall (map #(fix-api/subscribe client {:symbol %}) symbols))
+    
     ;(fix-api/snapshot client)    
     (println "will print current quote table every 5 seconds..")
     (set-interval (print-quotes client) 5000)
 
-   )  
+    )  
   
   )
 

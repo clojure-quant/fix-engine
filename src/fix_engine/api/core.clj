@@ -26,8 +26,9 @@
    ))
 
 (defn subscribe [client instrument]
-  (p/subscribe client instrument)
-  )
+  (let [id (quotes/symbol->ctrader-id (:symbol instrument))]
+     (p/subscribe client {:symbol id})  
+    ))
 
 
 (defn snapshot [client]

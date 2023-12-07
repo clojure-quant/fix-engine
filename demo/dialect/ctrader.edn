@@ -1,0 +1,25 @@
+
+
+[; note: ctrader has EURUSD and EUR/USD;
+ ; but this two symbols have differrent ids.
+ ; source of this data is the security-list-response
+ ; from ctrader. But because group parsing is not yet
+ ; working, we have to define the mapping statically here.
+ {:symbol "EUR/USD" :id  1 :digits 5}
+ {:symbol "GBP/USD" :id  2 :digits 5}
+ {:symbol "EUR/JPY" :id  3 :digits 3}
+ {:symbol "USD/JPY" :id  4 :digits 5}
+ {:symbol "AUD/USD" :id  5 :digits 5}
+ {:symbol "USD/CHF" :id  6 :digits 5}
+ {:symbol "GBP/JPY" :id  7 :digits 5}
+ {:symbol "USD/CAD" :id  8 :digits 5}
+ {:symbol "EUR/GBP" :id  9 :digits 5}
+ {:symbol "EUR/CHF" :id 10 :digits 5}
+ {:symbol "NZD/USD" :id 12 :digits 5}
+ {:symbol "USD/NOK" :id 22 :digits 5}
+ {:symbol "USD/ZAR" :id 45 :digits 5}
+ {:symbol "USD/SEK" :id 66 :digits 5}
+ {:symbol "USD/MXN" :id 94 :digits 4}]
+
+
+
