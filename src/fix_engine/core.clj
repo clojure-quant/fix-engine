@@ -1,9 +1,11 @@
 (ns fix-engine.core
   (:require
    [clojure.string :as s]
-   [lamina.core :as l]
+
    [aleph.tcp :as a]
+   [lamina.core :as l]
    [gloss.core :as g]
+   
    [cheshire.core :as c]
    [tick.core :as t]
    [fix-translator.core :refer [encode-msg decode-msg extract-tag-value get-msg-type load-spec]]
