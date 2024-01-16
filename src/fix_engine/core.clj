@@ -1,18 +1,17 @@
 (ns fix-engine.core
   (:require
-   [clojure.string :as s]
-
-   [aleph.tcp :as a]
-   [lamina.core :as l]
-   [gloss.core :as g]
-   
+   [clojure.string :as str]
+   [aleph.tcp :as tcp]
+   [gloss.core :as gloss]
+   [gloss.io :as io]
+   [manifold.deferred :as d]
+   [manifold.stream :as s]
    [cheshire.core :as c]
    [tick.core :as t]
    [fix-translator.core :refer [encode-msg decode-msg extract-tag-value get-msg-type load-spec]]
    [fix-engine.connection.protocol :as p]
    [fix-engine.quotes :as quotes]
-   [fix-engine.log :refer [log]]
-   )
+   [fix-engine.log :refer [log]])
   (:import (java.util.concurrent Executors Future TimeUnit)))
 
 
@@ -70,12 +69,46 @@
 (defn get-channel
   "Returns the channel used by a session."
   [session]
-  @@(:channel session))
+  (let [a @(:channel session)
+        b @a
+        ]
+    ;(println "a: " a) 
+    ;(println "b: " b)
+    b))
 
 (defn open-channel?
   "Returns whether a session's channel is open."
   [session]
-  (and (not= nil @(:channel session)) (not (l/closed? (get-channel session)))))
+  (and (not= nil @(:channel session)) 
+       (not (s/closed? (get-channel session)))))
+
+(def protocol
+  (gloss/string :ascii)) ; :utf-8
+
+(defn wrap-duplex-stream
+  [protocol s]
+  (let [out (s/stream)]
+    (s/connect
+     (s/map #(io/encode protocol %) out)
+     s)
+    (s/splice
+     out
+     (io/decode-stream s protocol))))
+
+(defn client
+  [host port]
+  (println "creating aleph tcp-client ..")
+  (let [c (tcp/client {:host host, :port port})
+        r (d/chain c
+                   #(wrap-duplex-stream protocol %))
+        ]
+    (println "client: " c)
+    (println "r: " r)
+    (println "@r: " @r)
+    (println "r: " r)
+    r
+    )
+  )
 
 (defn create-channel
   "If a session doesn't already have an open channel, then create a new one and
@@ -83,13 +116,11 @@
   [session]
   (if (not (open-channel? session))
     (do
-      (reset! (:channel session) (a/tcp-client {:host (:host session), ; a/tcp-client a/client 
-                                                :port (:port session),
-                                                :frame (g/string :ascii)}))
+      (reset! (:channel session) (client (:host session) (:port session)))
       (try (get-channel session)
            (catch java.net.ConnectException e
              (reset! (:channel session) nil)
-             (println "create-cannel exception: ")
+             (println "create-channel exception: ")
              (println (.getMessage e)))))
     (error "Channel already open.")))
 
@@ -98,7 +129,7 @@
    messages. If the last message in the collection is complete, it appends an
    empty string."
   [msg]
-  (let [segments (s/split msg msg-identifier)]
+  (let [segments (str/split msg msg-identifier)]
     (if (re-find msg-delimiter (peek segments))
       (conj segments "")
       segments)))
@@ -125,7 +156,14 @@
         encoded-msg (encode-msg (:venue session) msg)]
     (when log? 
        (log :msg "OUT" msg-type encoded-msg))
-    (l/enqueue (get-channel session) encoded-msg)))
+    (println "putting to channel: " encoded-msg)
+    (let [r (s/put! (get-channel session) encoded-msg)]
+      (println "put result: " r)
+      
+      )
+    
+    
+    ))
 
 
 (defn update-next-msg
@@ -222,6 +260,7 @@
   "Segments an inbound block of messages into individual messages, and processes
    them sequentially."
   [id msg]
+  ;(println "msg-handler msg: " msg)
   (let [session (get-session id)
         msg-fragment (:msg-fragment session)
         log? (:log? session)
@@ -302,7 +341,11 @@
        (println "connecting to sesion id: " id)
        (reset! (:translate? session) translate-returning-msgs)
        (create-channel session)
-       (l/receive-all (get-channel session) #((gen-msg-handler id) %)))
+       (println "consuming channel ..")
+       (s/consume (gen-msg-handler id) (get-channel session))
+       ;(s/consume #(prn "fix received:" %) (get-channel session))
+ 
+       )
      (error (str "Session " (:id id) " not found. Please create it first.")))))
 
 (defrecord FixConn [id]
@@ -414,8 +457,10 @@
   "Disconnect from a FIX session without logging out."
   [id]
   (if-let [session (get-session id)]
-    (if (open-channel? session)
-      (l/close (get-channel session)))
+    (when (open-channel? session)
+      ;(s/close (get-channel session))
+      (println "closing channel.. NOT IMPLEMENTED!")
+      )
     (error (str "Session " id " not found."))))
 
 (defn write-session
