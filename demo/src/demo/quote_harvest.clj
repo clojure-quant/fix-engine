@@ -34,11 +34,14 @@
     
     ;(p/subscribe client {:symbol "1"})
     ;(p/subscribe client {:symbol "2"})
+    (println "subscribing to quotes for symbols: " symbols)
     (doall (map #(fix-api/subscribe client {:symbol %}) symbols))
     
     ;(fix-api/snapshot client)    
     (println "will print current quote table every 5 seconds..")
     (set-interval (print-quotes client) 5000)
+
+     @(promise) ;; application run from the command line, no arguments, keep app running.
 
     )  
   
