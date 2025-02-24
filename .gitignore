@@ -12,3 +12,4 @@ log
 .cpcache
 .nrepl-port
 .calva
+.data

@@ -1,6 +1,7 @@
 (ns fix-engine.core
   (:require
    [clojure.string :as str]
+   [babashka.fs :as fs]
    [aleph.tcp :as tcp]
    [gloss.core :as gloss]
    [gloss.io :as io]
@@ -19,9 +20,6 @@
 
 (defn config-filename []
   (str @config-path "clients.cfg"))
-
-(defn global-filename [n]
-  (str @config-path n ".cfg"))
 
 
 ; FIX messages end with '10=xxx' where 'xxx' is a three-digit checksum
@@ -500,9 +498,10 @@
 (defn initialize
   "Initialize clj-fix. All this does is set the order-id-prefix to ensure unique
    client order ids for the session."
-  [config-file]
-  (let [today (timestamp "yyyyMMdd")
-        file (global-filename config-file)]
+  [config-dir]
+  (let [today (timestamp "yyyyMMdd") 
+        _ (fs/create-dirs config-dir)
+        file (str config-dir "fix-engine.json")]
     (try
       (if-let [config (c/parse-string (slurp file) true)]
         (if (= today (:last-startup config))
@@ -511,13 +510,13 @@
             (write-system-config file today @order-id-prefix))
           (do
             (write-system-config file today 0)
-            (initialize config-file))))
+            (initialize config-dir))))
       (catch Exception e
         (do
           (write-system-config file today 0)
-          (initialize config-file))))))
+          (initialize config-dir))))))
 
-(initialize "global")
+;(initialize "global")
 
 (defn update-fix-session
   "Sets a session's sequence numbers to supplied values."

@@ -1,6 +1,7 @@
 (ns demo.quote-harvest
   (:require 
     [clojure.pprint :refer [print-table]]
+    [fix-engine.core :as fix-engine]
     [fix-engine.api.core :as fix-api]
     [fix-engine.connection.protocol :as p]
    ))
@@ -29,6 +30,7 @@
   )
 
 (defn start-harvesting [& _]
+  (fix-engine/initialize ".data/")
   (let [client (fix-api/connect :ctrader-tradeviewmarkets-quote)] 
     (fix-api/on-quote client on-quote)
     
