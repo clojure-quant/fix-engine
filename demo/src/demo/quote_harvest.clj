@@ -30,7 +30,7 @@
   )
 
 (defn start-harvesting [& _]
-  (fix-engine/initialize ".data/")
+  (fix-engine/initialize ".data")
   (let [client (fix-api/connect :ctrader-tradeviewmarkets-quote)] 
     (fix-api/on-quote client on-quote)
     
@@ -43,10 +43,14 @@
     (println "will print current quote table every 5 seconds..")
     (set-interval (print-quotes client) 5000)
 
-     @(promise) ;; application run from the command line, no arguments, keep app running.
+    @(promise) ;; application run from the command line, no arguments, keep app running.
+    )
+  )
 
-    )  
-  
+(comment 
+   (start-harvesting {})
+
+ ; 
   )
 
 

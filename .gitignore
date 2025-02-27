@@ -13,3 +13,5 @@ log
 .nrepl-port
 .calva
 .data
+demo/msg.log
+demo/.calva

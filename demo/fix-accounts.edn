@@ -1,0 +1,26 @@
+{:ctrader-tradeviewmarkets-quote
+ {:spec "fix-specs/ctrader.edn"
+  :header {:begin-string "FIX.4.4"
+           :target-comp-id "CSERVER"
+           :sender-comp-id "demo.tradeviewmarkets.3193299"
+           :target-sub-id "QUOTE"
+           :sender-sub-id "QUOTE"}
+  :host "demo-uk-eqx-01.p.c-trader.com"
+  :port 5201 ; plain text
+  ;ssl-port 5211
+  :username "3193299"
+  :password "2025Florian"
+  :log? true}
+ :ctrader-tradeviewmarkets2-quote
+ {:spec "fix-specs/ctrader.edn"
+  :header {:begin-string "FIX.4.4"
+           :target-comp-id "cServer"
+           :sender-comp-id "demo.tradeviewmarkets.3193335"
+           :target-sub-id "QUOTE"
+           :sender-sub-id "QUOTE"}
+  :host "demo-uk-eqx-01.p.c-trader.com"
+  :port 5201 ; plain text
+   ;ssl-port 5211
+  :username "3193335"
+  :password "123456789"
+  :log? true}}

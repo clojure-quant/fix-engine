@@ -1,10 +1,15 @@
 (ns demo.connect
   (:require
    [fix-engine.core :as fix]
+   [fix-engine.api.core :as fix-api]
      ;[clj-fix.connection.protocol]
    )
   (:use fix-engine.connection.protocol))
  
+
+;(fix-engine/initialize ".data/")
+
+(def client (fix/load-client :ctrader-tradeviewmarkets-quote))
 
 client
 (:id client )

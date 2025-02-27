@@ -336,7 +336,7 @@
   ([id translate-returning-msgs]
    (if-let [session (get-session id)]
      (do
-       (println "connecting to sesion id: " id)
+       (println "connecting to session id: " id)
        (reset! (:translate? session) translate-returning-msgs)
        (create-channel session)
        (println "consuming channel ..")
@@ -501,7 +501,7 @@
   [config-dir]
   (let [today (timestamp "yyyyMMdd") 
         _ (fs/create-dirs config-dir)
-        file (str config-dir "fix-engine.json")]
+        file (str config-dir "/fix-engine.json")]
     (try
       (if-let [config (c/parse-string (slurp file) true)]
         (if (= today (:last-startup config))
@@ -531,6 +531,7 @@
   [client-label]
   (when-let [config (client-label (c/parse-string (slurp (config-filename))
                                                   true))]
+    (println "config: " config)
     (let [{:keys [venue host port sender sender-sub target target-sub
                   username password
                   last-logout inbound-seq-num

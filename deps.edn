@@ -1,23 +1,22 @@
 {:paths ["src" "resources"]
  :deps {org.clojure/clojure {:mvn/version "1.11.1"}
+        missionary/missionary          {:mvn/version "b.42"}
         ; https://github.com/clj-commons/aleph
         ; https://github.com/clj-commons/aleph/blob/master/examples/project.clj
         aleph/aleph {:mvn/version "0.7.0"}
-        ; https://github.com/clj-commons/gloss
-        org.clj-commons/gloss {:mvn/version "0.3.6"} ; uses manifold
         ; https://github.com/clj-commons/manifold
-        ; manifold is transient dependency of gloss
         ;manifold/manifold {:mvn/version "0.4.1"}
-        cheshire/cheshire {:mvn/version "5.10.2"}  ; JSON parsings and pretty printing
-        ; time encoding
-        tick/tick {:mvn/version "0.6.2"} 
-        io.github.clojure-quant/fix-encoding {:git/sha "0dcc50457715f69445bed7dde28233cdd33e9302"}
+        
+        ;io.github.clojure-quant/fix-encoding {:git/sha "0dcc50457715f69445bed7dde28233cdd33e9302"}
+        io.github.clojure-quant/fix-encoding {:local/root "../fix-encoding" :deps/manifest :deps}
         babashka/fs {:mvn/version "0.5.24"}
+        nano-id/nano-id {:mvn/version "1.1.0"}
+        ; legacy
+        cheshire/cheshire {:mvn/version "5.10.2"}  ; JSON parsings and pretty printing
         }
 
  :aliases
- {:outdated {:extra-deps {com.github.liquidz/antq {:mvn/version "RELEASE"}}
-             :main-opts ["-m" "antq.core"]}
+ {
 
 ;
   }}
