@@ -8,6 +8,8 @@
                        cider/cider-nrepl {:mvn/version "0.28.3"}}
           :main-opts  ["-m" "nrepl.cmdline"]}
 
+  :demo1 {:exec-fn  demo.demo1/start-cli}
+
   :demo {:exec-fn  demo.quote-harvest/start-harvesting}
 
 ;

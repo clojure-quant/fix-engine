@@ -4,6 +4,7 @@
    [nano-id.core :refer [nano-id]]
    [fix-translator.session :refer [load-accounts create-session]] 
    [fix-engine.socket :refer [create-client]]
+   [fix-engine.logger :refer [log]]
    ))
 
 (defn login-payload [{:keys [decoder]}]
@@ -41,14 +42,16 @@
       (create-session :ctrader-tradeviewmarkets2-quote)))
 
 (defn send-msg [{:keys [decoder send-fix-msg]} {:keys [fix-type fix-payload] :as fix-msg}]
-  (println "sending: " fix-type " data: " fix-payload)
-  (spit "msg.log" (str "\nsending type: " fix-type) :append true)
+  (log "send-data" fix-payload)
   (m/? (send-fix-msg fix-msg))) 
 
 (defn consume-incoming [{:keys [in-flow]}]
-  (let [t (m/reduce println nil in-flow)]
-    (t #(println "started consuming %")
-       #(println "crashed consuming %"))))
+  (let [log-msg (fn [_ v]
+                  (log "IN-FIX" v))
+        t (m/reduce log-msg nil in-flow)]
+    (log "consumer-start" "")
+    (t #(log "consumer-success" %)
+       #(log "consumer-crash " %))))
     
 (defn start []
   (let [decoder (create-decoder)
@@ -56,17 +59,25 @@
         this {:decoder decoder 
               :send-fix-msg send-fix-msg
               :in-flow in-flow}
+        ;_ (log "THIS" this)
         login-msg (login-payload this)
+        consumer-t (consume-incoming this)
+        this (assoc this :consumer-t consumer-t)
         ]
-    (consume-incoming this)
+    
     (send-msg this login-msg)
     (send-msg this (security-list-request))
     (send-msg this (subscribe-payload))
-    this))
+    this
+    ))
  
 
- (def this (start))
+; (def this (start))
 
+
+(defn start-cli [& _]
+  (start)
+  @(promise))
 
 
 

@@ -7,6 +7,7 @@
    [gloss.io :as io]
    [fix-translator.gloss :refer [fix-protocol xf-fix-message without-header]]
    [fix-translator.session :refer [encode-msg2]]
+   [fix-engine.logger :refer [log]]
    ))
 
 ;; manifold stuff
@@ -33,7 +34,7 @@
   (let [v (m/dfv)]
     (d/on-realized df
                    (fn [r]
-                     (println "deferred success: " r)
+                     ;(println "deferred success: " r)
                      (v (fn [] r))
                      ;(println "deferred success delivered!")
                      )
@@ -48,8 +49,7 @@
   (let [out-msg (->> (encode-msg2 this fix-type fix-payload)
                      :wire)
         data (without-header out-msg)]
-    (println "OUT: " data)
-    (spit "msg.log" (str "\nOUT: " data) :append true)
+    (log "OUT-PAYLOAD" data)
     out-msg))
 
 (defn connected? [stream]
@@ -68,8 +68,9 @@
           result-d (s/put! stream data) 
           result-t (deferred->task result-d)]
       (m/sp
+       (log "OUT-FIX" data)
        (let [r (m/? result-t)]
-         (println "put result: " r)
+         (log "send-result " r)
          (if r
            r
            (throw (ex-info "send-msg failed" {:msg fix-msg}))))))))
@@ -77,34 +78,30 @@
 (defn read-msg-t [this stream]
   (let [data-d (s/take! stream)]
    (deferred->task data-d)))
-     
-
-(defn log-in [data]
-  (let [data (without-header data)]
-    (println "IN:" data)
-    (spit "msg.log" (str "\nIN: " data) :append true))) 
 
 (defn create-read-f [this stream]
   (m/ap
    (loop [data (m/? (read-msg-t this stream))]
-     (log-in data)
-     (m/amb data)
-     (m/amb (recur (m/? (read-msg-t this stream)))))))
+     ;(log "IN" data)
+     (m/amb 
+      data
+      (if data 
+        (recur (m/? (read-msg-t this stream)))
+        (throw (ex-info "stream disconnected" {:where :in}))))
+     )))
 
 
 (defn create-client
   [this]
   (let [tcp-config (select-keys (:config this) [:host :port])
-        _ (println "connecting fix to: " tcp-config)
-        _ (spit "msg.log" "\nCONNECTING" :append true)
+        _ (log "CONNECTING" tcp-config)
         c (tcp/client tcp-config)
         r (d/chain c #(wrap-duplex-stream %))
         connect-t (deferred->task r)
         ]
     (m/sp 
      (let [stream (m/? connect-t)
-           _ (println "CONNECTED")
-           _ (spit "msg.log" "\nCONNECTED" :append true)]
+           _ (log "CONNECTED" "")]
        {:send-fix-msg (create-msg-writer this stream)
         :in-flow (->> (create-read-f this stream)
                       (m/eduction xf-fix-message))}))))
