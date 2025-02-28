@@ -71,6 +71,12 @@
     this
     ))
  
+(comment 
+  (create-decoder)
+  (-> (create-decoder) keys)
+  (-> (create-decoder) :config)
+  ;
+  )
 
 ; (def this (start))
 

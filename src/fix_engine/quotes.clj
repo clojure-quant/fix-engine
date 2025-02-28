@@ -1,35 +1,81 @@
 (ns fix-engine.quotes
   (:require
-   [fix-translator.core :refer [decode-msg]]))
+   [missionary.core :as m]
+    [nano-id.core :refer [nano-id]]
+   [fix-translator.session :refer [load-accounts create-session]] 
+   [fix-engine.boot :refer [boot-with-retry]]
+   )
+  (:import missionary.Cancelled))
+
+(defn login-payload [this]
+  {:fix-type "A"
+   :fix-payload {:encrypt-method :none-other,
+                 :heart-bt-int 60,
+                 :reset-seq-num-flag "Y",
+                 :username (str (get-in this [:config :username]))
+                 :password (str (get-in this [:config :password]))}})
+
+(defn subscribe-payload []
+  {:fix-type "V"
+   :fix-payload {:mdreq-id  (nano-id 5)
+                 :subscription-request-type :snapshot-plus-updates,
+                 :market-depth 1,
+                 :mdupdate-type :incremental-refresh,
+                 :no-mdentry-types [{:mdentry-type :bid} {:mdentry-type :offer}],
+                 :no-related-sym [{:symbol "4"} ; eurjpy
+                                  {:symbol "1"} ; eurusd
+                                  ]}})
+
+(defn quote-interactor [this conn]
+  ; this fn gets called whenever the connection is established.
+  (println "conn-interactor created conn:" )
+  (let [{:keys [send-fix-msg in-flow]} conn
+        process-msg (m/reduce
+                     (fn [_ msg]
+                       (println "quote interactor rcvd: " msg)
+                       )
+                     nil in-flow)
+        login-msg (login-payload this)             
+        subscribe-msg (subscribe-payload)
+        ]
+    (m/sp
+     (try
+       (println "quote-session will send login-msg")
+       (m/? (send-fix-msg login-msg))
+       (println "quote-session will send subscribe msg")
+       (m/? (send-fix-msg subscribe-msg))
+       ;(m/? (write {:op :message :val "browser-ws-connected"}))
+       ;(m/? (m/join vector process-msg send-msg))
+       (m/? process-msg)
+       ;(println "wsconninteractor DONE! success!")
+       (catch Exception ex
+         (println "wsconninteractor crashed: " ex))
+       (catch Cancelled _
+         (println "wsconninteractor was cancelled.")
+             ;(m/? shutdown!)
+         true)))))
+
+(defn create-decoder [fix-config-file account-kw]
+  (-> (load-accounts fix-config-file)
+      (create-session account-kw)))
 
 
+(defn account-session [config-file account-kw]
+  (println "getting fix account " account-kw)
+  (let [this (create-decoder config-file account-kw)
+        get-in-t (m/dfv) ; single assignment variable
+        boot-t (boot-with-retry this quote-interactor get-in-t)]
+    (m/stream
+     (m/ap
+      (let [dispose! (boot-t #(println "boot finished success.") 
+                             #(println "boot finished crash"))
+            _ (println "waiting to get in-task")
+            in-f (m/? get-in-t)                 
+            ]
+        (loop [msg (m/? in-f)]
+          (println "multiplexer rcvd: " msg)
+          (m/amb msg (recur (m/? in-f)))))))))
 
-; 262	MDReqID	Yes	Any valid value	String	A unique quote request ID. A new ID for a new subscription, the same ID as used before for a subscription removal.
-; 263	SubscriptionRequestType	Yes	1 or 2	Char	1 = Snapshot plus updates (subscribe);
-;  2 = Disable previous snapshot plus update request (unsubscribe) .
-;  264	MarketDepth	Yes	0 or 1	Integer	A full book will be provided.
-;  0 = Depth subscription;
-;  1 = Spot subscription.
-;  265	MDUpdateType	Yes	Any valid value	Integer	Only the Incremental Refresh is supported.
-;  267	NoMDEntryTypes	Yes	2	Integer	Always set to 2 (both bid and ask will be sent) .
-;  269	MDEntryType	Yes	0 or 1	Char	This repeating group contains a list of all types of the Market Data Entries the requester wants to receive.
-;  0 = Bid;
-;  1 = Offer.
-;  	NoRelatedSym	Yes	Any valid value	Integer	The number of symbols requested.
-;  55	Symbol	Yes	Any valid value	Long	Instrument identificators are provided by Spotware.
-
-
-; <message name="MarketDataIncrementalRefresh" msgtype="X" msgcat="app">
-; <field name="MDReqID" required="N"/>
-; <group name="NoMDEntries" required="Y">
-;    <field name="MDUpdateAction" required="Y"/>
-;    <field name="MDEntryType" required="N"/>
-;    <field name="MDEntryID" required="Y"/>
-;    <field name="Symbol" required="Y"/>
-;    <field name="MDEntryPx" required="N"/>
-;    <field name="MDEntrySize" required="N"/>
-; </group>
-; </message>
 
 
 (defonce subscription-id (atom 1))
@@ -61,26 +107,7 @@
  ;  
   )
 
-;<message name="MarketDataSnapshotFullRefresh" msgtype="W" msgcat="app">
-;<field name="MDReqID" required="N"/>
-;<field name="Symbol" required="Y"/>
-;<group name="NoMDEntries" required="Y">
-;  <field name="MDEntryType" required="Y"/>
-;  <field name="QuoteEntryID" required="N"/>
-;  <field name="MDEntryPx" required="Y"/>
-;  <field name="MDEntrySize" required="N"/>
-;  <field name="MDEntryID" required="N"/>
-;</group>
-;</message>
-
-
-
-;; security list
-
 (defn security-list-request []
   (let [sub-id (get-subscription-id)]
     [:security-list-request-id (str sub-id)
      :security-list-type "0"]))
-
-
- 

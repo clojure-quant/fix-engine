@@ -101,7 +101,8 @@
         ]
     (m/sp 
      (let [stream (m/? connect-t)
-           _ (log "CONNECTED" "")]
+           ;   (catch java.net.ConnectException e
+           _ (log "CONNECTED" tcp-config)]
        {:send-fix-msg (create-msg-writer this stream)
         :in-flow (->> (create-read-f this stream)
                       (m/eduction xf-fix-message))}))))
