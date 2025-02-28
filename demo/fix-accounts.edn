@@ -23,4 +23,18 @@
    ;ssl-port 5211
   :username "3193335"
   :password "123456789"
-  :log? true}}
+  :log? true}
+ :account-invalid-ip
+ {:spec "fix-specs/ctrader.edn"
+  :header {:begin-string "FIX.4.4"
+           :target-comp-id "cServer"
+           :sender-comp-id "demo.tradeviewmarkets.3193335"
+           :target-sub-id "QUOTE"
+           :sender-sub-id "QUOTE"}
+  :host "bongistan.the-dark-void-789.com"
+  :port 5201 ; plain text
+    ;ssl-port 5211
+  :username "3193335"
+  :password "123456789"
+  :log? true}
+ }

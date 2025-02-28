@@ -2,8 +2,7 @@
   (:require
    [missionary.core :as m]
    [fix-engine.socket :refer [create-client]]
-   [fix-engine.logger :refer [log]]
-   ))
+   [fix-engine.logger :refer [log]]))
 
 (defn fib-iter [[a b]]
   (case b
@@ -12,13 +11,14 @@
 
 (def fib (map first (iterate fib-iter [1 1])))
 
-(comment 
+(comment
   (take 20 fib)
   ;(1 1 2 3 5 8 13 21 34 55 89 144 233 377 610 987 1597 2584 4181 6765) 
 ;  
   )
 
 (def retry-delays (map (partial * 100) (next fib)))
+
 
 (defn r-subject-at [^objects arr slot]
   (fn [!]
@@ -33,58 +33,54 @@ Returns a task producing nil or failing if the websocket was closed before end o
   [this interactor conn-rdv]
   (m/sp
    (log "connector" "start")
-   (if-some [conn (m/? (create-client this))]
-     ; then
-     (try
-       (log "connector" "connection created, now setting conn-rdv")
-       (m/? (conn-rdv conn))
-       (log "connector" "conn-rdv set, now starting interactor")
-       (m/? (interactor this conn))
-       (finally
-         (log "connector" "has finished")
-         ;(when-not (= (.-CLOSED js/WebSocket) (.-readyState ws))
-         ;  (.close ws)
-         ;  (m/? (m/compel wait-for-close))
-         true
-         ))
-     ; else
-     (do 
-       (log "connector" "could not create fix session.")
-       true
-       )
-     )))
+   (try
+     (let [[exit conn] (try [nil (m/? (create-client this))]
+                            (catch java.net.UnknownHostException _
+                              (log "connector" "host unknown - cannot connect")
+                              [:host-unknown nil])
+                            (catch Exception ex
+                              (log "connector" (str "connect exception " (ex-message ex) (ex-data ex)))
+                              [:connect-ex nil]))]
+       (if conn 
+         ; connection established
+         (try 
+           (log "connector" "connection created, now setting conn-rdv")
+           (m/? (conn-rdv conn))
+           (log "connector" "conn-rdv set, now starting interactor")
+           (m/? (interactor this conn))
+           (catch Exception ex
+             (log "connector" (str "exception " (ex-message ex) (ex-data ex)))
+             :run-ex)
+           (finally
+             (log "connector" "has finished")
+                                    ;(when-not (= (.-CLOSED js/WebSocket) (.-readyState ws))
+                                    ;  (.close ws)
+                                    ;  (m/? (m/compel wait-for-close))
+             :run-finally))
+         ; connnect err
+         exit)))))
 
 (defn boot-with-retry [this interactor set-in-t]
   (m/sp
-    (log "boot" "started")
+   (log "boot" "started")
    (loop [delays retry-delays]
-     (let [s (object-array 1)
-           conn-rdv (m/rdv)
+     (let [conn-rdv (m/rdv)
            in-f (m/ap
                  (let [in-f (:in-flow (m/? conn-rdv))]
                    (loop []
-                       (m/amb (m/?> in-f) (recur))
-                       )))]
+                     (m/amb (m/?> in-f) (recur)))))]
        (log "boot" "set-in-f ..")
        (set-in-t in-f)
        (log "boot" "connecting..")
        (when-some [[delay & delays]
-                   (when-some [info (m/? (connect-and-run this interactor conn-rdv))]
-                     (if-some [code (:code info)]
-                       (let [retry? (case code
-                                      1008
-                                      (throw (ex-info "Stale Electric client" {:hyperfiddle.electric/type ::stale-client}))
-
-                                      1013 ; server timeout - The WS spec defines 1011 - arbitrary server error,
-                                      (do (println "Electric server timed out, considering this Electric client inactive.")
-                                          true)
-                                      ; else
-                                      (do (println (str "fix socket disconnected for an unexpected reason - " (pr-str info)))
-                                          true))]
-                         (when retry?
-                           (seq retry-delays)))
-                       (do (println "FIX client failed to connect")
-                           delays)))]
+                   (when-some [exit (m/? (connect-and-run this interactor conn-rdv))]
+                     (log "boot" (str "exit code: " exit))
+                     (case exit
+                       :host-unknown nil ; no reconnects
+                       :connect-ex delays
+                       :run-ex (seq retry-delays)
+                       :run-finally (seq retry-delays)
+                       delays))]
          (log "boot" (str "Next attempt in " (/ delay 1000) " seconds."))
          (recur (m/? (m/sleep delay delays))))))))
 

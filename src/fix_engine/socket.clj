@@ -39,7 +39,7 @@
                      ;(println "deferred success delivered!")
                      )
                    (fn [e]
-                     (println "deferred error: " e)
+                     ;(println "deferred error: " e)
                      (v (fn [] (throw e)))
                      ;(println "deferred error delivered!")
                      ))
