@@ -49,9 +49,9 @@
        (m/? process-msg)
        ;(println "wsconninteractor DONE! success!")
        (catch Exception ex
-         (println "wsconninteractor crashed: " ex))
+         (println "quote interactor crashed: " ex))
        (catch Cancelled _
-         (println "wsconninteractor was cancelled.")
+         (println "quote interactor was cancelled.")
              ;(m/? shutdown!)
          true)))))
 
