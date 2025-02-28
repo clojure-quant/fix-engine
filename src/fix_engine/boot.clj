@@ -30,7 +30,7 @@ server : the server part of the program
 cb : the callback for incoming messages.
 msgs : the discrete flow of messages to send, spawned when websocket is connected, cancelled on websocket close.
 Returns a task producing nil or failing if the websocket was closed before end of reduction. "
-  [this interactor conn-rdv]
+  [this interactor current-conn]
   (m/sp
    (log "connector" "start")
    (let [[exit conn] (try [nil (m/? (create-client this))]
@@ -44,7 +44,8 @@ Returns a task producing nil or failing if the websocket was closed before end o
          ; connection established
        (try
          (log "connector" "connection created, now setting conn-rdv")
-         (m/? (conn-rdv conn))
+         ;(m/? (conn-rdv conn))
+         (reset! current-conn conn)
          (log "connector" "conn-rdv set, now starting interactor")
          (m/? (interactor this conn))
          :run-finally
@@ -55,33 +56,37 @@ Returns a task producing nil or failing if the websocket was closed before end o
        exit))))
 
 (defn forever [task]
-  (m/ap (m/? (m/?> (m/seed (repeat task))))))
+  (m/ap (m/? (m/?> 100 (m/seed (repeat task))))))
 
 (defn boot-with-retry [this interactor set-in-t]
   (m/sp
    (log "boot" "started")
    (loop [delays retry-delays]
-     (let [conn-rdv (m/rdv) ; sync rendevouz
-           conn-f (forever conn-rdv)
+     (let [current-conn (atom nil)
+           ;conn-rdv (m/rdv) ; sync rendevouz
+           ;conn-f (forever conn-rdv)
+           conn-f (m/watch current-conn)
            in-f (m/ap
-                 (let [conn (m/?> 5 conn-f)
+                 (let [conn (m/?> 100 conn-f)
                        in-f (:in-flow conn)]
                    (if in-f
                      (do (log "flow-forwarder" "new in-f")
                          (try 
-                           (let [data (m/?> 5 in-f)]
+                           (let [data (m/?> 100 in-f)]
                              (log "flow-forwarder" data)
                              data)  
                            (catch Exception _
                              (log "flow-forwarder" "read ex.")
                              (m/amb))))
-                     (log "flow-forwarder" "received nil conn.")
+                     (do 
+                       (log "flow-forwarder" "received nil conn.")  
+                       (m/amb))
                      )))]
        (log "boot" "set-in-f ..")
        (set-in-t in-f)
        (log "boot" "connecting..")
        (when-some [[delay & delays]
-                   (when-some [exit (m/? (connect-and-run this interactor conn-rdv))]
+                   (when-some [exit (m/? (connect-and-run this interactor current-conn))]
                      (log "boot" (str "exit code: " exit))
                      (case exit
                        :host-unknown nil ; no reconnects

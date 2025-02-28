@@ -1,9 +1,10 @@
 {:paths ["src" "resources"]
  :deps {org.clojure/clojure {:mvn/version "1.11.1"}
-        missionary/missionary {:mvn/version "b.42"}
+        missionary/missionary {:mvn/version "b.44"}
         ; https://github.com/clj-commons/aleph
         ; https://github.com/clj-commons/aleph/blob/master/examples/project.clj
         aleph/aleph {:mvn/version "0.7.0"}
+        ;aleph/aleph {:mvn/version "0.8.3"}
         ; https://github.com/clj-commons/manifold
         ;manifold/manifold {:mvn/version "0.4.1"}
         babashka/fs {:mvn/version "0.5.24"}

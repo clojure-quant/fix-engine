@@ -24,12 +24,14 @@
         (if in-f
           (try
             (log "acc" "got a new in-flow!")
-            (let [msg (m/?> in-f)]
+            (let [msg (m/?> 100 in-f)]
               (log "acc in" msg)
               msg)
             (catch Cancelled _
               (log "acc" "got cancelled")
               (dispose!))
+            (catch Exception _
+              (log "acc" "got exception"))
             (finally
                   ;  (log "acc" "finally!")
                   ;  (dispose!)
