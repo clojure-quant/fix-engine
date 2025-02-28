@@ -1,10 +1,10 @@
 (ns fix-engine.quotes
   (:require
    [missionary.core :as m]
-    [nano-id.core :refer [nano-id]]
-   [fix-translator.session :refer [load-accounts create-session]] 
-   [fix-engine.boot :refer [boot-with-retry]]
-   )
+   [nano-id.core :refer [nano-id]]
+   [fix-engine.logger :refer [log]]
+   [fix-translator.session :refer [load-accounts create-session]]
+   [fix-engine.boot :refer [boot-with-retry]])
   (:import missionary.Cancelled))
 
 (defn login-payload [this]
@@ -26,32 +26,41 @@
                                   {:symbol "1"} ; eurusd
                                   ]}})
 
+(defn security-list-request []
+  {:fix-type "x"
+   :fix-payload {:security-req-id (nano-id 5) ; req id
+                 :security-list-request-type :symbol}})
+
+
 (defn quote-interactor [this conn]
   ; this fn gets called whenever the connection is established.
-  (println "conn-interactor created conn:" )
   (let [{:keys [send-fix-msg in-flow]} conn
         process-msg (m/reduce
                      (fn [_ msg]
-                       (println "quote interactor rcvd: " msg)
-                       )
+                       (log "qi-in" msg))
                      nil in-flow)
-        login-msg (login-payload this)             
+        login-msg (login-payload this)
         subscribe-msg (subscribe-payload)
+        sec-list-msg2 (security-list-request)
         ]
     (m/sp
      (try
-       (println "quote-session will send login-msg")
+       (log "qi" "will send login-msg")
        (m/? (send-fix-msg login-msg))
-       (println "quote-session will send subscribe msg")
-       (m/? (send-fix-msg subscribe-msg))
-       ;(m/? (write {:op :message :val "browser-ws-connected"}))
+       ;(log "qi" "will send subscribe msg")
+       ;(m/? (send-fix-msg subscribe-msg))
+       (log "qi" "will send security-list msg")
+       ;(log "qi" sec-list-msg2)
+       (m/? (send-fix-msg sec-list-msg2))
        ;(m/? (m/join vector process-msg send-msg))
        (m/? process-msg)
        ;(println "wsconninteractor DONE! success!")
        (catch Exception ex
-         (println "quote interactor crashed: " ex))
+         (log "qi" (str "crash: " {:msg (ex-message ex) :data (ex-data ex)}))
+         ;(println "quote interactor crashed: " ex)
+         )
        (catch Cancelled _
-         (println "quote interactor was cancelled.")
+         (log "qi" "got cancelled")
              ;(m/? shutdown!)
          true)))))
 
@@ -61,53 +70,30 @@
 
 
 (defn account-session [config-file account-kw]
-  (println "getting fix account " account-kw)
+  (log "acc" (str "loading fix account " account-kw))
   (let [this (create-decoder config-file account-kw)
         get-in-t (m/dfv) ; single assignment variable
         boot-t (boot-with-retry this quote-interactor get-in-t)]
     (m/stream
      (m/ap
-      (let [dispose! (boot-t #(println "boot finished success.") 
-                             #(println "boot finished crash"))
-            _ (println "waiting to get in-task")
-            in-f (m/? get-in-t)                 
-            ]
-        (loop [msg (m/? in-f)]
-          (println "multiplexer rcvd: " msg)
-          (m/amb msg (recur (m/? in-f)))))))))
+      (let [dispose! (boot-t #(log "boot" "finished success.")
+                             #(log "boot" "finished crash"))
+            _ (log "acc" "waiting to get input flow..")
+            in-f (m/? get-in-t)]
+        (if in-f
+          (try
+            (log "acc" "got a new in-flow!")
+            (loop [msg (m/?> in-f)]
+              (log "acc in" msg)
+              (m/amb msg (recur (m/? in-f))))
+            (catch Cancelled _
+              (log "acc" "got cancelled")
+              (dispose!))
+                  ;(finally
+                  ;  (log "acc" "finally!")
+                  ;  (dispose!)
+                  ;  (log "acc" "disposed success")
+                ;  )
+            )
+          (log "acc" "flow is nil.")))))))
 
-
-
-(defonce subscription-id (atom 1))
-
-(defn get-subscription-id []
-  (swap! subscription-id inc))
-
-
-(defn subscription [{:keys [symbol]}]
-  (let [sub-id (get-subscription-id)]
-    [:md-req-id (str sub-id)
-     :md-sub-type "1" ; 2=unsubscibe
-     :md-update-type "1" ; ctrader only supports 1 type.
-     :md-sub-depth "1" ; 0=orderbook 1=best-bid-ask
-     :md-sub-number-entries "2" ; send bid and ask together
-     :md-sub-entry-type "0" ; 0 = bid
-     :md-sub-entry-type "1" ; 1 = ask
-     :md-sub-number-instruments "1"
-     :symbol symbol]))
-
-
-(comment
-
-  (get-subscription-id)
-
-  (subscription {:symbol "EURUSD"})
-
-
- ;  
-  )
-
-(defn security-list-request []
-  (let [sub-id (get-subscription-id)]
-    [:security-list-request-id (str sub-id)
-     :security-list-type "0"]))

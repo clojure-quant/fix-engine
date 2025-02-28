@@ -8,7 +8,13 @@
 
 
 (def account-in-printer
-  (m/reduce (fn [_ v] (println "account-in:" v)) nil account-in-f))
+  (m/reduce (fn [_ v] (println "demo in:" v)) nil account-in-f))
 
 
+(def dispose! 
 (account-in-printer prn prn)
+)
+
+
+(dispose!)
+

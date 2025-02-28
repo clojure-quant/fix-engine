@@ -2,6 +2,7 @@
   (:require
    [missionary.core :as m]
    [fix-engine.socket :refer [create-client]]
+   [fix-engine.logger :refer [log]]
    ))
 
 (defn fib-iter [[a b]]
@@ -31,41 +32,44 @@ msgs : the discrete flow of messages to send, spawned when websocket is connecte
 Returns a task producing nil or failing if the websocket was closed before end of reduction. "
   [this interactor conn-rdv]
   (m/sp
-   (println "connect-and-run")
+   (log "connector" "start")
    (if-some [conn (m/? (create-client this))]
      ; then
      (try
-       (println "setting conn rdv")
-       (conn-rdv conn)
-       (println "start interactor")
+       (log "connector" "connection created, now setting conn-rdv")
+       (m/? (conn-rdv conn))
+       (log "connector" "conn-rdv set, now starting interactor")
        (m/? (interactor this conn))
-            (finally
+       (finally
+         (log "connector" "has finished")
          ;(when-not (= (.-CLOSED js/WebSocket) (.-readyState ws))
          ;  (.close ws)
          ;  (m/? (m/compel wait-for-close))
-              ))
+         true
+         ))
      ; else
      (do 
-         (println "fix session connect error")
-         {}  
+       (log "connector" "could not create fix session.")
+       true
        )
      )))
 
 (defn boot-with-retry [this interactor set-in-t]
   (m/sp
-   (println "boot-with-retry..")
+    (log "boot" "started")
    (loop [delays retry-delays]
      (let [s (object-array 1)
            conn-rdv (m/rdv)
            in-f (m/ap
-                 (loop []
-                   (let [data (m/? (:in-flow conn-rdv))]
-                     (m/amb (m/?> data) (recur))
-                     )))]
-       (println "Connecting...")
+                 (let [in-f (:in-flow (m/? conn-rdv))]
+                   (loop []
+                       (m/amb (m/?> in-f) (recur))
+                       )))]
+       (log "boot" "set-in-f ..")
+       (set-in-t in-f)
+       (log "boot" "connecting..")
        (when-some [[delay & delays]
                    (when-some [info (m/? (connect-and-run this interactor conn-rdv))]
-                     (set-in-t in-f)
                      (if-some [code (:code info)]
                        (let [retry? (case code
                                       1008
@@ -81,7 +85,7 @@ Returns a task producing nil or failing if the websocket was closed before end o
                            (seq retry-delays)))
                        (do (println "FIX client failed to connect")
                            delays)))]
-         (println (str "Next attempt in " (/ delay 1000) " seconds."))
+         (log "boot" (str "Next attempt in " (/ delay 1000) " seconds."))
          (recur (m/? (m/sleep delay delays))))))))
 
 

@@ -80,15 +80,16 @@
    (deferred->task data-d)))
 
 (defn create-read-f [this stream]
-  (m/ap
-   (loop [data (m/? (read-msg-t this stream))]
+  (m/stream 
+   (m/ap
+    (loop [data (m/? (read-msg-t this stream))]
      ;(log "IN" data)
-     (m/amb 
-      data
-      (if data 
-        (recur (m/? (read-msg-t this stream)))
-        (throw (ex-info "stream disconnected" {:where :in}))))
-     )))
+      (m/amb 
+       data
+       (if data 
+         (recur (m/? (read-msg-t this stream)))
+         (throw (ex-info "stream disconnected" {:where :in}))))
+      ))))
 
 
 (defn create-client
