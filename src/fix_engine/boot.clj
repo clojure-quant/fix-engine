@@ -33,42 +33,50 @@ Returns a task producing nil or failing if the websocket was closed before end o
   [this interactor conn-rdv]
   (m/sp
    (log "connector" "start")
-   (try
-     (let [[exit conn] (try [nil (m/? (create-client this))]
-                            (catch java.net.UnknownHostException _
-                              (log "connector" "host unknown - cannot connect")
-                              [:host-unknown nil])
-                            (catch Exception ex
-                              (log "connector" (str "connect exception " (ex-message ex) (ex-data ex)))
-                              [:connect-ex nil]))]
-       (if conn 
+   (let [[exit conn] (try [nil (m/? (create-client this))]
+                          (catch java.net.UnknownHostException _
+                            (log "connector" "host unknown - cannot connect")
+                            [:host-unknown nil])
+                          (catch Exception ex
+                            (log "connector" (str "connect exception " (ex-message ex) (ex-data ex)))
+                            [:connect-ex nil]))]
+     (if conn
          ; connection established
-         (try 
-           (log "connector" "connection created, now setting conn-rdv")
-           (m/? (conn-rdv conn))
-           (log "connector" "conn-rdv set, now starting interactor")
-           (m/? (interactor this conn))
-           (catch Exception ex
-             (log "connector" (str "exception " (ex-message ex) (ex-data ex)))
-             :run-ex)
-           (finally
-             (log "connector" "has finished")
-                                    ;(when-not (= (.-CLOSED js/WebSocket) (.-readyState ws))
-                                    ;  (.close ws)
-                                    ;  (m/? (m/compel wait-for-close))
-             :run-finally))
+       (try
+         (log "connector" "connection created, now setting conn-rdv")
+         (m/? (conn-rdv conn))
+         (log "connector" "conn-rdv set, now starting interactor")
+         (m/? (interactor this conn))
+         :run-finally
+         (catch Exception ex
+           (log "connector" (str "exception " (ex-message ex) (ex-data ex)))
+           :run-ex))
          ; connnect err
-         exit)))))
+       exit))))
+
+(defn forever [task]
+  (m/ap (m/? (m/?> (m/seed (repeat task))))))
 
 (defn boot-with-retry [this interactor set-in-t]
   (m/sp
    (log "boot" "started")
    (loop [delays retry-delays]
-     (let [conn-rdv (m/rdv)
+     (let [conn-rdv (m/rdv) ; sync rendevouz
+           conn-f (forever conn-rdv)
            in-f (m/ap
-                 (let [in-f (:in-flow (m/? conn-rdv))]
-                   (loop []
-                     (m/amb (m/?> in-f) (recur)))))]
+                 (let [conn (m/?> 5 conn-f)
+                       in-f (:in-flow conn)]
+                   (if in-f
+                     (do (log "flow-forwarder" "new in-f")
+                         (try 
+                           (let [data (m/?> 5 in-f)]
+                             (log "flow-forwarder" data)
+                             data)  
+                           (catch Exception _
+                             (log "flow-forwarder" "read ex.")
+                             (m/amb))))
+                     (log "flow-forwarder" "received nil conn.")
+                     )))]
        (log "boot" "set-in-f ..")
        (set-in-t in-f)
        (log "boot" "connecting..")
@@ -77,9 +85,10 @@ Returns a task producing nil or failing if the websocket was closed before end o
                      (log "boot" (str "exit code: " exit))
                      (case exit
                        :host-unknown nil ; no reconnects
-                       :connect-ex delays
+                       :connect-ex delays ; increasing delays
                        :run-ex (seq retry-delays)
                        :run-finally (seq retry-delays)
+                       true nil ; no reconnects on cancel
                        delays))]
          (log "boot" (str "Next attempt in " (/ delay 1000) " seconds."))
          (recur (m/? (m/sleep delay delays))))))))

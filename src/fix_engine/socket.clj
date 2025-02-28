@@ -70,7 +70,7 @@
       (m/sp
        (log "OUT-FIX" data)
        (let [r (m/? result-t)]
-         (log "send-result " r)
+         ;(log "send-result " r)
          (if r
            r
            (throw (ex-info "send-msg failed" {:msg fix-msg}))))))))
@@ -83,12 +83,14 @@
   (m/stream 
    (m/ap
     (loop [data (m/? (read-msg-t this stream))]
-     ;(log "IN" data)
+     ;(log "IN" data) ; this would log each tag=value tuple
       (m/amb 
        data
        (if data 
          (recur (m/? (read-msg-t this stream)))
-         (throw (ex-info "stream disconnected" {:where :in}))))
+         (do (log "fix-conn" "got disconnected")
+             (throw (ex-info "fix-connection disconnected" {:where :in}))
+             )))
       ))))
 
 

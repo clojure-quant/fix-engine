@@ -17,23 +17,22 @@
         boot-t (boot-with-retry this interactor get-in-t)]
     (m/stream
      (m/ap
-      (let [dispose! (boot-t #(log "boot completed" %)
-                             #(log "boot crash " %))
+      (let [dispose! (boot-t #(log "boot-task completed" %)
+                             #(log "boot-task crash " %))
             _ (log "acc" "waiting to get input flow..")
             in-f (m/? get-in-t)]
         (if in-f
           (try
             (log "acc" "got a new in-flow!")
-            (loop [msg (m/?> in-f)]
+            (let [msg (m/?> in-f)]
               (log "acc in" msg)
-              (m/amb msg (recur (m/? in-f))))
+              msg)
             (catch Cancelled _
               (log "acc" "got cancelled")
               (dispose!))
-                  ;(finally
+            (finally
                   ;  (log "acc" "finally!")
                   ;  (dispose!)
                   ;  (log "acc" "disposed success")
-                ;  )
-            )
+              ))
           (log "acc" "flow is nil.")))))))
