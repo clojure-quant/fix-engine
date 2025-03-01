@@ -6,7 +6,7 @@
    [manifold.stream :as s]
    [gloss.io :as io]
    [fix-translator.gloss :refer [fix-protocol xf-fix-message without-header]]
-   [fix-translator.session :refer [encode-msg2]]
+   [fix-translator.session :refer [encode-msg]]
    [fix-engine.logger :refer [log]]
    ))
 
@@ -46,8 +46,7 @@
     (m/absolve v)))
 
 (defn encode-fix-msg [this {:keys [fix-type fix-payload]}]
-  (let [out-msg (->> (encode-msg2 this fix-type fix-payload)
-                     :wire)
+  (let [out-msg (encode-msg this [fix-type fix-payload])
         data (without-header out-msg)]
     (log "OUT-PAYLOAD" data)
     out-msg))
