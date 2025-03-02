@@ -1,12 +1,20 @@
 (ns demo.demo2
   (:require
    [missionary.core :as m]
-   [fix-engine.quotes :refer [account-quotes]]
+   [fix-engine.core :refer [create-fix-engine configured-accounts 
+                            get-quote-session]]
    [fix-engine.logger :refer [log]]
    ))
 
+(def fix-engine 
+  (create-fix-engine "fix-accounts.edn"))
+
+(configured-accounts fix-engine)
+
+fix-engine
+
 (def account-in-f
-  (account-quotes "fix-accounts.edn" :ctrader-tradeviewmarkets2-quote))
+  (get-quote-session fix-engine :ctrader-tradeviewmarkets2-quote))
 
 
 (def account-in-printer

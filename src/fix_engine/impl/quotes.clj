@@ -1,9 +1,8 @@
-(ns fix-engine.quotes
+(ns fix-engine.impl.quotes
   (:require
    [missionary.core :as m]
    [nano-id.core :refer [nano-id]]
-   [fix-engine.logger :refer [log]]
-   [fix-engine.account :refer [account-session]])
+   [fix-engine.logger :refer [log]])
   (:import missionary.Cancelled))
 
 (defn login-payload [this]
@@ -65,5 +64,4 @@
        
        ))))
 
-(defn account-quotes [config-file account-kw]
-  (account-session config-file account-kw quote-interactor))
+
