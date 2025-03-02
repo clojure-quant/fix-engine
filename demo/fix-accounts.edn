@@ -12,6 +12,7 @@
   :password "2025Florian"
   :log-out-payload false
   :log-out-fix false
+  :log-in-fix false
   }
  :ctrader-tradeviewmarkets2-quote
  {:spec "fix-specs/ctrader.edn"
@@ -26,7 +27,8 @@
   :username "3193335"
   :password "123456789"
   :log-out-payload false
-  :log-out-fix false}
+  :log-out-fix false
+  :log-in-fix false}
  :account-invalid-ip
  {:spec "fix-specs/ctrader.edn"
   :header {:begin-string "FIX.4.4"
@@ -40,5 +42,6 @@
   :username "3193335"
   :password "123456789"
   :log-out-payload false
-  :log-out-fix false}
+  :log-out-fix false
+  :log-in-fix false}
  }

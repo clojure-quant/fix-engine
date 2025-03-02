@@ -37,9 +37,13 @@
     (fn [this conn]
   ; this fn gets called whenever the connection is established.
       (let [{:keys [send-fix-msg in-flow]} conn
+            ;config (:config this)
+            ;_ (log "QI CONFIG: " config)
+            log-in-fix (get-in this [:config :log-in-fix])
             process-msg (m/reduce
                          (fn [_ msg]
-                           (log "qi-in" (pr-str msg))
+                           (when log-in-fix 
+                             (log "FIX-IN" (pr-str msg)))
                            nil)
                          nil in-flow)
             login-msg (login-payload this)
@@ -52,7 +56,7 @@
             send-heartbeat-t (m/sp 
                               (m/? (send-fix-msg heartbeat-request)))
             heartbeat-t (m/sp 
-                         (println "quote heartbeat sender started")
+                         (println "qi quote heartbeat sender started")
                          (loop []
                            (m/? (m/sleep 25000)) 
                            (m/? send-heartbeat-t)
