@@ -4,7 +4,7 @@
    [nano-id.core :refer [nano-id]]
    [fix-engine.logger :refer [log]]
    [fix-translator.session :refer [decode-msg]]
-   [fix-translator.ctrader :refer [->quote]])
+   [fix-translator.ctrader :refer [->quote subscribe-payload]])
   (:import missionary.Cancelled))
 
 (defn login-payload [this]
@@ -15,7 +15,7 @@
     :username (str (get-in this [:config :username]))
     :password (str (get-in this [:config :password]))}])
 
-(defn subscribe-payload []
+#_(defn subscribe-payload []
   ["V" {:mdreq-id  (nano-id 5)
         :subscription-request-type :snapshot-plus-updates,
         :market-depth 1,
@@ -29,6 +29,8 @@
   ["x" {:security-req-id (nano-id 5) ; req id
         :security-list-request-type :symbol}])
 
+(def heartbeat-request 
+  ["0" {}])
 
 (defn create-quote-interactor []
   (let [interactor-state (atom {})]
@@ -41,8 +43,20 @@
                            nil)
                          nil in-flow)
             login-msg (login-payload this)
-            subscribe-msg (subscribe-payload)
-            sec-list-msg2 (security-list-request)]
+            ;assets ["1" "2" "3"]
+            assets (->> (range 30)
+                        (map inc)
+                        (map str))
+            subscribe-msg (subscribe-payload assets)
+            sec-list-msg2 (security-list-request)
+            send-heartbeat-t (m/sp 
+                              (m/? (send-fix-msg heartbeat-request)))
+            heartbeat-t (m/sp 
+                         (println "quote heartbeat sender started")
+                         (loop []
+                           (m/? (m/sleep 25000)) 
+                           (m/? send-heartbeat-t)
+                           (recur)))]
         (m/sp
          (try
            (log "qi" "will send login-msg")
@@ -50,10 +64,9 @@
            (log "qi" "will send subscribe msgs")
            (m/? (send-fix-msg subscribe-msg))
            (log "qi" "will send security-list msg")
-       ;(log "qi" sec-list-msg2)
            (m/? (send-fix-msg sec-list-msg2))
-       ;(m/? (m/join vector process-msg send-msg))
-           (m/? process-msg)
+           ;(m/? process-msg)
+           (m/? (m/join vector process-msg heartbeat-t))
            (log "qi" "process-msg finished. (session disconnect)")
            (catch Cancelled _
              (log "qi" "got cancelled")

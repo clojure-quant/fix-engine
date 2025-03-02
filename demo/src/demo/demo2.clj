@@ -4,6 +4,7 @@
    [fix-engine.core :refer [create-fix-engine configured-accounts 
                             get-quote-session]]
    [fix-engine.logger :refer [log]]
+   [fix-engine.bar-generator :refer [create-bargenerator start-processing-feed stop-processing-feed]]
    ))
 
 ;; CREATE FIX ENGINE
@@ -22,16 +23,24 @@ fix-engine
 
 (def account-in-printer
   (m/reduce (fn [_ v] 
-              (log "demo in" v)) nil account-in-f))
+              (log "QUOTE IN" v)) nil account-in-f))
 
 
 (def dispose! 
-(account-in-printer #(log "demo-task completed" %)
-                    #(log "demo-task crash " %))
-)
-
+  (account-in-printer #(log "demo-task completed" %)
+                      #(log "demo-task crash " %)))
 
 (dispose!)
+
+
+(def tickerplant (create-bargenerator))
+
+(start-processing-feed tickerplant :ctrader2 account-in-f)
+
+(stop-processing-feed tickerplant :ctrader2)
+
+tickerplant
+
 
 
 ;; bad ip

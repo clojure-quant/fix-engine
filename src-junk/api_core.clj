@@ -1,4 +1,4 @@
-(ns fix-engine.api.core
+(ns fix-engine.api.api-core
   (:require
    [fix-engine.core :as fix]
    [fix-engine.connection.protocol :as p]

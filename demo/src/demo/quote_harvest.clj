@@ -2,7 +2,7 @@
   (:require 
     [clojure.pprint :refer [print-table]]
     [fix-engine.core :as fix-engine]
-    [fix-engine.api.core :as fix-api]
+    [fix-engine.api.api-core :as fix-api]
     [fix-engine.connection.protocol :as p]
    ))
 

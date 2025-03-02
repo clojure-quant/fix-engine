@@ -7,8 +7,7 @@
    [gloss.io :as io]
    [fix-translator.gloss :refer [fix-protocol xf-fix-message without-header]]
    [fix-translator.session :refer [encode-msg]]
-   [fix-engine.logger :refer [log]]
-   ))
+   [fix-engine.logger :refer [log]]))
 
 ;; manifold stuff
 
@@ -45,9 +44,13 @@
                      ))
     (m/absolve v)))
 
-(defn encode-fix-msg [this fix-type-payload-vec]
+(defn encode-fix-msg-log [this fix-type-payload-vec]
   (log "OUT-PAYLOAD" fix-type-payload-vec)
   (encode-msg this fix-type-payload-vec))
+
+(defn encode-fix-msg-no-log [this fix-type-payload-vec]
+  (encode-msg this fix-type-payload-vec))
+
 
 (defn connected? [stream]
   (when stream
@@ -58,36 +61,41 @@
 
 
 (defn create-msg-writer [this stream]
-  (fn [fix-type-payload-vec]
-    (when-not (connected? stream)
-       (throw (ex-info "send-msg failed (not connected)" {:text "not connected"})))
-    (let [data (encode-fix-msg this fix-type-payload-vec)
-          result-d (s/put! stream data) 
-          result-t (deferred->task result-d)]
-      (m/sp
-       (log "OUT-FIX" (pr-str data))
-       (let [r (m/? result-t)]
+  (let [log-out-payload (get-in this [:config :log-out-payload])
+        log-out-fix (get-in this [:config :log-out-fix])
+        encode-fix-msg (if log-out-fix
+                         encode-fix-msg-log 
+                         encode-fix-msg-no-log)]
+    (fn [fix-type-payload-vec]
+      (when-not (connected? stream)
+        (throw (ex-info "send-msg failed (not connected)" {:text "not connected"})))
+      (let [data (encode-fix-msg this fix-type-payload-vec)
+            result-d (s/put! stream data)
+            result-t (deferred->task result-d)]
+        (m/sp
+         (when log-out-fix 
+           (log "OUT-FIX" (pr-str data)))
+         (let [r (m/? result-t)]
          ;(log "send-result " r)
-         (if r
-           r
-           (throw (ex-info "send-msg failed" {:msg fix-type-payload-vec}))))))))
+           (if r
+             r
+             (throw (ex-info "send-msg failed" {:msg fix-type-payload-vec})))))))))
 
 (defn read-msg-t [this stream]
   (let [data-d (s/take! stream)]
-   (deferred->task data-d)))
+    (deferred->task data-d)))
 
 (defn create-read-f [this stream]
   (m/ap
    (loop [data (m/? (read-msg-t this stream))]
      ;(log "IN" data) ; this would log each tag=value tuple
-     (m/amb 
+     (m/amb
       data
-      (if data 
+      (if data
         (recur (m/? (read-msg-t this stream)))
         (do (log "fix-conn" "got disconnected")
             nil ; (throw (ex-info "fix-connection disconnected" {:where :in}))
-            )))
-     )))
+            ))))))
 
 (defn create-client
   [this]
@@ -96,7 +104,7 @@
         c (tcp/client tcp-config)
         r (d/chain c #(wrap-duplex-stream %))
         connect-t (deferred->task r)]
-    (m/sp 
+    (m/sp
      (let [stream (m/? connect-t)
            _ (log "CONNECTED" tcp-config)]
        {:send-fix-msg (create-msg-writer this stream)

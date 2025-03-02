@@ -10,7 +10,9 @@
   ;ssl-port 5211
   :username "3193299"
   :password "2025Florian"
-  :log? true}
+  :log-out-payload false
+  :log-out-fix false
+  }
  :ctrader-tradeviewmarkets2-quote
  {:spec "fix-specs/ctrader.edn"
   :header {:begin-string "FIX.4.4"
@@ -23,7 +25,8 @@
    ;ssl-port 5211
   :username "3193335"
   :password "123456789"
-  :log? true}
+  :log-out-payload false
+  :log-out-fix false}
  :account-invalid-ip
  {:spec "fix-specs/ctrader.edn"
   :header {:begin-string "FIX.4.4"
@@ -36,5 +39,6 @@
     ;ssl-port 5211
   :username "3193335"
   :password "123456789"
-  :log? true}
+  :log-out-payload false
+  :log-out-fix false}
  }
