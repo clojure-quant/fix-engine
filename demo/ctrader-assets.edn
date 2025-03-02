@@ -1,0 +1,107 @@
+({:asset "EURUSD", :digits :5, :ctrader "1"}
+ {:asset "GBPUSD", :digits :5, :ctrader "2"}
+ {:asset "EURJPY", :digits :3, :ctrader "3"}
+ {:asset "USDJPY", :digits :3, :ctrader "4"}
+ {:asset "AUDUSD", :digits :5, :ctrader "5"}
+ {:asset "USDCHF", :digits :5, :ctrader "6"}
+ {:asset "GBPJPY", :digits :3, :ctrader "7"}
+ {:asset "USDCAD", :digits :5, :ctrader "8"}
+ {:asset "EURGBP", :digits :5, :ctrader "9"}
+ {:asset "EURCHF", :digits :5, :ctrader "10"}
+ {:asset "AUDJPY", :digits :3, :ctrader "11"}
+ {:asset "NZDUSD", :digits :5, :ctrader "12"}
+ {:asset "CHFJPY", :digits :3, :ctrader "13"}
+ {:asset "EURAUD", :digits :5, :ctrader "14"}
+ {:asset "CADJPY", :digits :3, :ctrader "15"}
+ {:asset "GBPAUD", :digits :5, :ctrader "16"}
+ {:asset "EURCAD", :digits :5, :ctrader "17"}
+ {:asset "AUDCAD", :digits :5, :ctrader "18"}
+ {:asset "GBPCAD", :digits :5, :ctrader "19"}
+ {:asset "AUDNZD", :digits :5, :ctrader "20"}
+ {:asset "NZDJPY", :digits :3, :ctrader "21"}
+ {:asset "USDNOK", :digits :4, :ctrader "22"}
+ {:asset "AUDCHF", :digits :5, :ctrader "23"}
+ {:asset "USDMXN", :digits :4, :ctrader "24"}
+ {:asset "GBPNZD", :digits :5, :ctrader "25"}
+ {:asset "EURNZD", :digits :5, :ctrader "26"}
+ {:asset "CADCHF", :digits :5, :ctrader "27"}
+ {:asset "USDSGD", :digits :5, :ctrader "28"}
+ {:asset "USDSEK", :digits :4, :ctrader "29"}
+ {:asset "NZDCAD", :digits :5, :ctrader "30"}
+ {:asset "EURSEK", :digits :4, :ctrader "31"}
+ {:asset "GBPSGD", :digits :4, :ctrader "32"}
+ {:asset "EURNOK", :digits :4, :ctrader "33"}
+ {:asset "EURHUF", :digits :2, :ctrader "34"}
+ {:asset "USDPLN", :digits :4, :ctrader "35"}
+ {:asset "USDDKK", :digits :4, :ctrader "36"}
+ {:asset "GBPNOK", :digits :4, :ctrader "37"}
+ {:asset "AUDDKK", :digits :4, :ctrader "38"}
+ {:asset "NZDCHF", :digits :5, :ctrader "39"}
+ {:asset "GBPCHF", :digits :5, :ctrader "40"}
+ {:asset "XAUUSD", :digits :2, :ctrader "41"}
+ {:asset "XAGUSD", :digits :3, :ctrader "42"}
+ {:asset "USDTRY", :digits :5, :ctrader "43"}
+ {:asset "NGAS", :digits :3, :ctrader "44"}
+ {:asset "USDZAR", :digits :5, :ctrader "45"}
+ {:asset "BTC/USD", :digits :2, :ctrader "46"}
+ {:asset "ETH/USD", :digits :2, :ctrader "47"}
+ {:asset "LTC/USD", :digits :2, :ctrader "48"}
+ {:asset "XBN/USD", :digits :2, :ctrader "49"}
+ {:asset "XRP/USD", :digits :5, :ctrader "50"}
+ {:asset "EUR/CHF", :digits :5, :ctrader "51"}
+ {:asset "AUD/JPY", :digits :3, :ctrader "52"}
+ {:asset "NZD/USD", :digits :5, :ctrader "53"}
+ {:asset "CHF/JPY", :digits :3, :ctrader "54"}
+ {:asset "EUR/AUD", :digits :5, :ctrader "55"}
+ {:asset "CAD/JPY", :digits :3, :ctrader "56"}
+ {:asset "GBP/AUD", :digits :5, :ctrader "57"}
+ {:asset "EUR/CAD", :digits :5, :ctrader "58"}
+ {:asset "GBP/CAD", :digits :5, :ctrader "59"}
+ {:asset "AUD/NZD", :digits :5, :ctrader "60"}
+ {:asset "NZD/JPY", :digits :3, :ctrader "61"}
+ {:asset "AUD/USD", :digits :5, :ctrader "62"}
+ {:asset "AUD/CHF", :digits :5, :ctrader "63"}
+ {:asset "GBP/NZD", :digits :5, :ctrader "64"}
+ {:asset "EUR/NZD", :digits :5, :ctrader "65"}
+ {:asset "USD/SEK", :digits :5, :ctrader "66"}
+ {:asset "NZD/CAD", :digits :5, :ctrader "67"}
+ {:asset "GBP/NOK", :digits :5, :ctrader "68"}
+ {:asset "AUD/DKK", :digits :4, :ctrader "69"}
+ {:asset "NZD/CHF", :digits :5, :ctrader "70"}
+ {:asset "GBP/CHF", :digits :5, :ctrader "71"}
+ {:asset "XAU/USD", :digits :2, :ctrader "72"}
+ {:asset "EUR/JPY", :digits :3, :ctrader "73"}
+ {:asset "EUR/GBP", :digits :5, :ctrader "74"}
+ {:asset "CAD/CHF", :digits :5, :ctrader "75"}
+ {:asset "USD/CHF", :digits :5, :ctrader "76"}
+ {:asset "AUD/CAD", :digits :5, :ctrader "77"}
+ {:asset "USD/SGD", :digits :5, :ctrader "78"}
+ {:asset "GBP/USD", :digits :5, :ctrader "79"}
+ {:asset "EUR/SEK", :digits :5, :ctrader "80"}
+ {:asset "EUR/NOK", :digits :5, :ctrader "81"}
+ {:asset "EUR/HUF", :digits :3, :ctrader "82"}
+ {:asset "USD/JPY", :digits :3, :ctrader "83"}
+ {:asset "GBP/JPY", :digits :3, :ctrader "84"}
+ {:asset "USD/PLN", :digits :5, :ctrader "85"}
+ {:asset "USD/DKK", :digits :5, :ctrader "86"}
+ {:asset "XAG/USD", :digits :3, :ctrader "87"}
+ {:asset "GBP/SGD", :digits :5, :ctrader "88"}
+ {:asset "EUR/USD", :digits :5, :ctrader "89"}
+ {:asset "USD/TRY", :digits :5, :ctrader "90"}
+ {:asset "USD/CAD", :digits :5, :ctrader "91"}
+ {:asset "USD/NOK", :digits :5, :ctrader "92"}
+ {:asset "USD/ZAR", :digits :5, :ctrader "93"}
+ {:asset "USD/MXN", :digits :4, :ctrader "94"}
+ {:asset "Australia 200", :digits :2, :ctrader "95"}
+ {:asset "Europe 50", :digits :1, :ctrader "96"}
+ {:asset "France 40", :digits :1, :ctrader "97"}
+ {:asset "Germany 30 (Mini)", :digits :1, :ctrader "98"}
+ {:asset "Hong Kong 50", :digits :2, :ctrader "99"}
+ {:asset "Japan 225", :digits :0, :ctrader "100"}
+ {:asset "Spain 35", :digits :1, :ctrader "101"}
+ {:asset "UK 100", :digits :1, :ctrader "102"}
+ {:asset "US SPX 500 (Mini)", :digits :1, :ctrader "103"}
+ {:asset "US Tech 100 (Mini)", :digits :1, :ctrader "104"}
+ {:asset "Wall Street 30 (Mini)", :digits :0, :ctrader "105"}
+ {:asset "XTI/USD", :digits :2, :ctrader "106"}
+ {:asset "XBR/USD", :digits :3, :ctrader "107"})

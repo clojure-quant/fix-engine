@@ -2,52 +2,57 @@
   (:require 
    [missionary.core :as m]
    [nano-id.core :refer [nano-id]]
-   [fix-translator.session :refer [load-accounts create-session]] 
+   [fix-translator.session :refer [load-accounts create-session decode-msg]] 
+   [fix-translator.ctrader :refer [write-assets]]
    [fix-engine.socket :refer [create-client]]
    [fix-engine.logger :refer [log]]
    ))
 
+
 (defn login-payload [{:keys [decoder]}]
-  {:fix-type "A"
-   :fix-payload {:encrypt-method :none-other,
+  ["A" {:encrypt-method :none-other,
                  :heart-bt-int 60,
-                 :reset-seq-num-flag "Y",
-                 :username (str (get-in decoder [:config :username]))
-                 :password (str (get-in decoder [:config :password]))}})
+                  :reset-seq-num-flag "Y",
+                  :username (str (get-in decoder [:config :username]))
+                  :password (str (get-in decoder [:config :password]))}])
 
 
 (defn heartbeat-payload []
-  {:fix-type "0"
-   :fix-payload {:test-request-id  (nano-id 5)}})
+  ["0" {:test-request-id  (nano-id 5)}])
 
 
 (defn subscribe-payload []
-  {:fix-type "V"
-   :fix-payload {:mdreq-id  (nano-id 5)
+  ["V" {:mdreq-id  (nano-id 5)
                  :subscription-request-type :snapshot-plus-updates,
                  :market-depth 1,
                  :mdupdate-type :incremental-refresh,
                  :no-mdentry-types [{:mdentry-type :bid} {:mdentry-type :offer}],
                  :no-related-sym [{:symbol "4"} ; eurjpy
                                   {:symbol "1"} ; eurusd
-                                  ]}})
+                                  ]}])
 
 (defn security-list-request []
-  {:fix-type "x"
-   :fix-payload {:security-req-id (nano-id 5) ; req id
-                 :security-list-request-type :symbol}})
+  ["x" {:security-req-id (nano-id 5) ; req id
+        :security-list-request-type :symbol}])
 
 (defn create-decoder []
   (-> (load-accounts "fix-accounts.edn")
       (create-session :ctrader-tradeviewmarkets2-quote)))
 
-(defn send-msg [{:keys [decoder send-fix-msg]} {:keys [fix-type fix-payload] :as fix-msg}]
-  (log "send-data" fix-payload)
-  (m/? (send-fix-msg fix-msg))) 
+(defn send-msg [{:keys [decoder send-fix-msg]} fix-type-payload-vec]
+  (log "send-data" fix-type-payload-vec)
+  (m/? (send-fix-msg fix-type-payload-vec))) 
 
-(defn consume-incoming [{:keys [in-flow]}]
+(defn consume-msg [this fix-msg]
+  (log "IN-FIX" (pr-str fix-msg))
+  (let [msg-type-payload (decode-msg this fix-msg)
+        [msg-type payload] msg-type-payload]
+    (when (= msg-type "y")
+      (write-assets msg-type-payload))))
+
+(defn consume-incoming [{:keys [decoder in-flow] :as this}]
   (let [log-msg (fn [_ v]
-                  (log "IN-FIX" v))
+                  (consume-msg decoder v))
         t (m/reduce log-msg nil in-flow)]
     (log "consumer-start" "")
     (t #(log "consumer-success" %)
@@ -72,19 +77,20 @@
     ))
  
 (comment 
-  (create-decoder)
+  (def this (start))
+
+  (def this2 (create-decoder))
+  (decode-msg this2 [["8" "FIX.4.4"] ["9" "115"] ["35" "A"] ["34" "1"] ["49" "cServer"] ["50" "QUOTE"] ["52" "20250302-02:17:30.606"] ["56" "demo.tradeviewmarkets.3193335"] ["57" "QUOTE"] ["98" "0"] ["108" "60"] ["141" "Y"] ["10" "197"]]
+                    )
+  
   (-> (create-decoder) keys)
   (-> (create-decoder) :config)
+
   ;
   )
 
-; (def this (start))
-
+; DEPS.EDN ENTRY POINT
 
 (defn start-cli [& _]
   (start)
   @(promise))
-
-
-
-

@@ -45,11 +45,9 @@
                      ))
     (m/absolve v)))
 
-(defn encode-fix-msg [this {:keys [fix-type fix-payload]}]
-  (let [out-msg (encode-msg this [fix-type fix-payload])
-        data (without-header out-msg)]
-    (log "OUT-PAYLOAD" data)
-    out-msg))
+(defn encode-fix-msg [this fix-type-payload-vec]
+  (log "OUT-PAYLOAD" fix-type-payload-vec)
+  (encode-msg this fix-type-payload-vec))
 
 (defn connected? [stream]
   (when stream
@@ -60,10 +58,10 @@
 
 
 (defn create-msg-writer [this stream]
-  (fn [fix-msg]
+  (fn [fix-type-payload-vec]
     (when-not (connected? stream)
        (throw (ex-info "send-msg failed (not connected)" {:text "not connected"})))
-    (let [data (encode-fix-msg this fix-msg)
+    (let [data (encode-fix-msg this fix-type-payload-vec)
           result-d (s/put! stream data) 
           result-t (deferred->task result-d)]
       (m/sp
@@ -72,15 +70,14 @@
          ;(log "send-result " r)
          (if r
            r
-           (throw (ex-info "send-msg failed" {:msg fix-msg}))))))))
+           (throw (ex-info "send-msg failed" {:msg fix-type-payload-vec}))))))))
 
 (defn read-msg-t [this stream]
   (let [data-d (s/take! stream)]
    (deferred->task data-d)))
 
 (defn create-read-f [this stream]
-  (m/stream 
-   (m/ap
+  (m/ap
     (loop [data (m/? (read-msg-t this stream))]
      ;(log "IN" data) ; this would log each tag=value tuple
       (m/amb 
@@ -88,10 +85,9 @@
        (if data 
          (recur (m/? (read-msg-t this stream)))
          (do (log "fix-conn" "got disconnected")
-             (throw (ex-info "fix-connection disconnected" {:where :in}))
+             nil ; (throw (ex-info "fix-connection disconnected" {:where :in}))
              )))
-      ))))
-
+      )))
 
 (defn create-client
   [this]
@@ -106,7 +102,7 @@
            ;   (catch java.net.ConnectException e
            _ (log "CONNECTED" tcp-config)]
        {:send-fix-msg (create-msg-writer this stream)
-        :in-flow (->> (create-read-f this stream)
-                      (m/eduction xf-fix-message))}))))
+        :in-flow (m/stream  (->> (create-read-f this stream)
+                                 (m/eduction xf-fix-message)))}))))
 
 

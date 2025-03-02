@@ -5,7 +5,6 @@
    [fix-engine.logger :refer [log]]
    ))
 
-
 (def account-in-f
   (account-quotes "fix-accounts.edn" :ctrader-tradeviewmarkets2-quote))
 

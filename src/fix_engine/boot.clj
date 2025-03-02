@@ -2,7 +2,8 @@
   (:require
    [missionary.core :as m]
    [fix-engine.socket :refer [create-client]]
-   [fix-engine.logger :refer [log]]))
+   [fix-engine.logger :refer [log]])
+  (:import missionary.Cancelled))
 
 (defn fib-iter [[a b]]
   (case b
@@ -75,8 +76,12 @@ Returns a task producing nil or failing if the websocket was closed before end o
                            (let [data (m/?> 100 in-f)]
                              (log "flow-forwarder" data)
                              data)  
-                           (catch Exception _
-                             (log "flow-forwarder" "read ex.")
+                           (catch Cancelled _
+                             (log "flow-forwarder" "got cancelled")
+                                        ;(m/? shutdown!)
+                             :flow-forwarder-cancelled)
+                           (catch Exception ex
+                             (log "flow-forwarder ex" {:data (ex-data ex) :msg (ex-message ex)})
                              (m/amb))))
                      (do 
                        (log "flow-forwarder" "received nil conn.")  
