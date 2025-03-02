@@ -34,7 +34,7 @@
   (let [{:keys [send-fix-msg in-flow]} conn
         process-msg (m/reduce
                      (fn [_ msg]
-                       (log "qi-in" msg)
+                       (log "qi-in" (pr-str msg))
                        nil)
                      nil in-flow)
         login-msg (login-payload this)

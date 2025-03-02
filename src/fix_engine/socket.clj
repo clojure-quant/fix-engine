@@ -65,7 +65,7 @@
           result-d (s/put! stream data) 
           result-t (deferred->task result-d)]
       (m/sp
-       (log "OUT-FIX" data)
+       (log "OUT-FIX" (pr-str data))
        (let [r (m/? result-t)]
          ;(log "send-result " r)
          (if r
@@ -78,16 +78,16 @@
 
 (defn create-read-f [this stream]
   (m/ap
-    (loop [data (m/? (read-msg-t this stream))]
+   (loop [data (m/? (read-msg-t this stream))]
      ;(log "IN" data) ; this would log each tag=value tuple
-      (m/amb 
-       data
-       (if data 
-         (recur (m/? (read-msg-t this stream)))
-         (do (log "fix-conn" "got disconnected")
-             nil ; (throw (ex-info "fix-connection disconnected" {:where :in}))
-             )))
-      )))
+     (m/amb 
+      data
+      (if data 
+        (recur (m/? (read-msg-t this stream)))
+        (do (log "fix-conn" "got disconnected")
+            nil ; (throw (ex-info "fix-connection disconnected" {:where :in}))
+            )))
+     )))
 
 (defn create-client
   [this]
@@ -95,14 +95,13 @@
         _ (log "CONNECTING" tcp-config)
         c (tcp/client tcp-config)
         r (d/chain c #(wrap-duplex-stream %))
-        connect-t (deferred->task r)
-        ]
+        connect-t (deferred->task r)]
     (m/sp 
      (let [stream (m/? connect-t)
-           ;   (catch java.net.ConnectException e
            _ (log "CONNECTED" tcp-config)]
        {:send-fix-msg (create-msg-writer this stream)
-        :in-flow (m/stream  (->> (create-read-f this stream)
-                                 (m/eduction xf-fix-message)))}))))
+        :in-flow (->> (create-read-f this stream) ; flow of fields
+                      (m/eduction xf-fix-message) ; flow of field-vecs
+                      (m/stream))})))) ; publisher
 
 

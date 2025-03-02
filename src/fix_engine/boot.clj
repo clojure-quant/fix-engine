@@ -38,6 +38,7 @@ Returns a task producing nil or failing if the websocket was closed before end o
                           (catch java.net.UnknownHostException _
                             (log "connector" "host unknown - cannot connect")
                             [:host-unknown nil])
+                          ;   (catch java.net.ConnectException e
                           (catch Exception ex
                             (log "connector" (str "connect exception " (ex-message ex) (ex-data ex)))
                             [:connect-ex nil]))]
@@ -62,33 +63,33 @@ Returns a task producing nil or failing if the websocket was closed before end o
 (defn boot-with-retry [this interactor set-in-t]
   (m/sp
    (log "boot" "started")
-   (loop [delays retry-delays]
-     (let [current-conn (atom nil)
-           ;conn-rdv (m/rdv) ; sync rendevouz
-           ;conn-f (forever conn-rdv)
-           conn-f (m/watch current-conn)
-           in-f (m/ap
-                 (let [conn (m/?> 100 conn-f)
-                       in-f (:in-flow conn)]
-                   (if in-f
-                     (do (log "flow-forwarder" "new in-f")
-                         (try 
-                           (let [data (m/?> 100 in-f)]
-                             (log "flow-forwarder" data)
-                             data)  
-                           (catch Cancelled _
-                             (log "flow-forwarder" "got cancelled")
-                                        ;(m/? shutdown!)
-                             :flow-forwarder-cancelled)
-                           (catch Exception ex
-                             (log "flow-forwarder ex" {:data (ex-data ex) :msg (ex-message ex)})
-                             (m/amb))))
-                     (do 
-                       (log "flow-forwarder" "received nil conn.")  
-                       (m/amb))
-                     )))]
-       (log "boot" "set-in-f ..")
-       (set-in-t in-f)
+   (let [current-conn (atom nil)
+                    ;conn-rdv (m/rdv) ; sync rendevouz
+                    ;conn-f (forever conn-rdv)
+         conn-f (m/watch current-conn)
+         in-f (m/stream
+               (m/ap
+                (let [conn (m/?> 100 conn-f)
+                      in-f (:in-flow conn)]
+                  (if in-f
+                    (do (log "flow-forwarder" "new in-f")
+                        (try
+                          (let [data (m/?> 100 in-f)]
+                            (log "flow-forwarder" data)
+                            data)
+                          (catch Cancelled _
+                            (log "flow-forwarder" "got cancelled")
+                                                 ;(m/? shutdown!)
+                            :flow-forwarder-cancelled)
+                          (catch Exception ex
+                            (log "flow-forwarder ex" {:data (ex-data ex) :msg (ex-message ex)})
+                            (m/amb))))
+                    (do
+                      (log "flow-forwarder" "received nil conn.")
+                      (m/amb))))))]
+     (log "boot" "set-in-f ..")
+     (set-in-t in-f)
+     (loop [delays retry-delays]
        (log "boot" "connecting..")
        (when-some [[delay & delays]
                    (when-some [exit (m/? (connect-and-run this interactor current-conn))]

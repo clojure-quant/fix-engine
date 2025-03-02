@@ -23,7 +23,7 @@
             in-f (m/? get-in-t)]
         (if in-f
           (try
-            (log "acc" "got a new in-flow!")
+            (log "acc" "got the in-flow!")
             (let [msg (m/?> 100 in-f)]
               (log "acc in" msg)
               msg)
@@ -32,9 +32,10 @@
               (dispose!))
             (catch Exception _
               (log "acc" "got exception"))
-            (finally
+            ;(finally
                   ;  (log "acc" "finally!")
                   ;  (dispose!)
                   ;  (log "acc" "disposed success")
-              ))
+              ;)
+            )
           (log "acc" "flow is nil.")))))))
