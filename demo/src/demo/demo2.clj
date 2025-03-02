@@ -6,6 +6,8 @@
    [fix-engine.logger :refer [log]]
    ))
 
+;; CREATE FIX ENGINE
+
 (def fix-engine 
   (create-fix-engine "fix-accounts.edn"))
 
@@ -13,9 +15,10 @@
 
 fix-engine
 
+;; QUOTES FLOW
+
 (def account-in-f
   (get-quote-session fix-engine :ctrader-tradeviewmarkets2-quote))
-
 
 (def account-in-printer
   (m/reduce (fn [_ v] 

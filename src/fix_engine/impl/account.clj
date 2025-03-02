@@ -7,11 +7,12 @@
    [fix-engine.impl.mutil :refer [rlock with-lock]])
   (:import missionary.Cancelled))
 
-(defn create-account-session [{:keys [accounts] :as this} account-kw interactor]
+(defn create-account-session [{:keys [accounts] :as this} account-kw create-interactor]
   (log "acc" (str "loading fix account " account-kw))
   (let [this (create-session accounts account-kw) 
         _ (println "session created")
         get-in-t (m/dfv) ; single assignment variable
+        interactor (create-interactor)
         boot-t (boot-with-retry this interactor get-in-t)]
     (m/stream
      (m/ap
