@@ -1,4 +1,4 @@
-(ns fix-engine.socket
+(ns fix-engine.impl.socket
   (:require
    [missionary.core :as m]
    [aleph.tcp :as tcp]

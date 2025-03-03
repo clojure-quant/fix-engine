@@ -4,7 +4,7 @@
    [nano-id.core :refer [nano-id]]
    [fix-translator.session :refer [load-accounts create-session decode-msg]] 
    [fix-translator.ctrader :refer [write-assets]]
-   [fix-engine.socket :refer [create-client]]
+   [fix-engine.impl.socket :refer [create-client]]
    [fix-engine.logger :refer [log]]
    ))
 

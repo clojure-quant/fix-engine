@@ -15,16 +15,6 @@
     :username (str (get-in this [:config :username]))
     :password (str (get-in this [:config :password]))}])
 
-#_(defn subscribe-payload []
-  ["V" {:mdreq-id  (nano-id 5)
-        :subscription-request-type :snapshot-plus-updates,
-        :market-depth 1,
-        :mdupdate-type :incremental-refresh,
-        :no-mdentry-types [{:mdentry-type :bid} {:mdentry-type :offer}],
-        :no-related-sym [{:symbol "4"} ; eurjpy
-                         {:symbol "1"} ; eurusd
-                         ]}])
-
 (defn security-list-request []
   ["x" {:security-req-id (nano-id 5) ; req id
         :security-list-request-type :symbol}])
@@ -56,10 +46,12 @@
             send-heartbeat-t (m/sp 
                               (m/? (send-fix-msg heartbeat-request)))
             heartbeat-t (m/sp 
-                         (println "qi quote heartbeat sender started")
+                         (log "QI" "heartbeat sender started")
                          (loop []
                            (m/? (m/sleep 25000)) 
+                           (log "QI" "send heartbeat")
                            (m/? send-heartbeat-t)
+                           (log "QI" "send heartbeat success")
                            (recur)))]
         (m/sp
          (try

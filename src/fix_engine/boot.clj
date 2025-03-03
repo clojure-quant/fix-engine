@@ -1,7 +1,7 @@
 (ns fix-engine.boot
   (:require
    [missionary.core :as m]
-   [fix-engine.socket :refer [create-client]]
+   [fix-engine.impl.socket :refer [create-client]]
    [fix-engine.logger :refer [log]])
   (:import missionary.Cancelled))
 
@@ -75,7 +75,7 @@ Returns a task producing nil or failing if the websocket was closed before end o
                     (do (log "flow-forwarder" "new in-f")
                         (try
                           (let [data (m/?> 100 in-f)]
-                            (log "flow-forwarder" data)
+                            ;(log "flow-forwarder" data)
                             data)
                           (catch Cancelled _
                             (log "flow-forwarder" "got cancelled")

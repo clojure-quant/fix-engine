@@ -4,7 +4,7 @@
    [fix-engine.core :refer [create-fix-engine configured-accounts 
                             get-quote-session]]
    [fix-engine.logger :refer [log]]
-   [fix-engine.bar-generator :refer [create-bargenerator start-processing-feed stop-processing-feed]]
+   [bar-generator.core :refer [create-bargenerator start-processing-feed stop-processing-feed]]
    ))
 
 ;; CREATE FIX ENGINE
@@ -45,7 +45,7 @@ fix-engine
 
 (defn start []
 
-  (def dispose!
+  #_(def dispose!
     (account-in-printer #(log "demo-task completed" %)
                         #(log "demo-task crash " %)))
 

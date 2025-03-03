@@ -1,4 +1,4 @@
-(ns fix-engine.bar-generator
+(ns bar-generator.core
   (:require
    [tick.core :as t]
    [missionary.core :as m])
