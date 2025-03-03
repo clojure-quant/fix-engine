@@ -22,6 +22,19 @@
 (def heartbeat-request 
   ["0" {}])
 
+(defn timeout
+  "Throw if `mailbox` haven't got any message after given `time` ms"
+  [mailbox time]
+  (m/sp
+   (log "qt" "timeout watchdog has been started")
+   (loop []
+     (when (= :timeout (m/? (m/timeout mailbox time :timeout)))
+       (log "qt" "timeout watchdog - timeout detected")
+       (throw (ex-info "No message received after specified time" {::type ::timeout, ::time-seconds (int (/ time 1000))})))
+     (recur))))
+
+
+
 (defn create-quote-interactor []
   (let [interactor-state (atom {})]
     (fn [this conn]
@@ -30,8 +43,10 @@
             ;config (:config this)
             ;_ (log "QI CONFIG: " config)
             log-in-fix (get-in this [:config :log-in-fix])
+            keepalive-mailbox (m/mbx)
             process-msg (m/reduce
                          (fn [_ msg]
+                           (keepalive-mailbox nil)
                            (when log-in-fix 
                              (log "FIX-IN" (pr-str msg)))
                            nil)
@@ -62,7 +77,11 @@
            (log "qi" "will send security-list msg")
            (m/? (send-fix-msg sec-list-msg2))
            ;(m/? process-msg)
-           (m/? (m/join vector process-msg heartbeat-t))
+           (m/? (m/join vector 
+                        process-msg 
+                        heartbeat-t
+                         (timeout keepalive-mailbox 90000)
+                        ))
            (log "qi" "process-msg finished. (session disconnect)")
            (catch Cancelled _
              (log "qi" "got cancelled")
