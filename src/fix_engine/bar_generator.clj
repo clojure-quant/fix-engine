@@ -9,13 +9,18 @@
 
 (defn log-quotes [quotes]
   (let [sw (StringWriter.)
+        _ (.write sw "\n")
         _ (doall
            (for [quote quotes]
              (let [quote-str (str "\n" quote)]
-               (.write quote-str))))
+               (.write sw quote-str))))
         sdata (.toString sw)]
     (log-quote-text sdata)))
 
+(comment 
+  (log-quotes [1 2 3])
+;  
+  )
 
 (defn extended-quote-f [market-kw quote-f]
   (m/eduction
@@ -29,11 +34,11 @@
   {:markets (atom {})})
 
 (defn start-processing-feed [this market-kw quote-f]
-  (let [equote-f (extended-quote-f market-kw quote-f)
-        quote-block-f equote-f
-        ;quote-block-f (m/eduction (partition-all 10) equote-f)
+  (let [equote-f (extended-quote-f market-kw quote-f) 
+        quote-block-f (m/eduction (partition-all 10) equote-f)
         quote-writer-t (m/reduce (fn [_ quotes] 
-                                   (log-quotes quotes) nil) 
+                                   (log-quotes quotes)
+                                   nil) 
                                  nil quote-block-f)
         quote-writer-dispose (quote-writer-t
                               (fn [_] (log-quote-text "\nquote-writer-task completed\n"))

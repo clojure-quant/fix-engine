@@ -30,23 +30,12 @@ fix-engine
   (account-in-printer #(log "demo-task completed" %)
                       #(log "demo-task crash " %)))
 
-(dispose!)
-
-
 (def tickerplant (create-bargenerator))
-
-(start-processing-feed tickerplant :ctrader2 account-in-f)
-
-(stop-processing-feed tickerplant :ctrader2)
-
-tickerplant
-
-
 
 ;; bad ip
 
 (def account-in-f2
-  (account-quotes "fix-accounts.edn" :account-invalid-ip))
+  (get-quote-session fix-engine :account-invalid-ip))
 
 
 (def account-in-printer2
@@ -56,6 +45,26 @@ tickerplant
 (def dispose!2
   (account-in-printer2 prn prn))
 
-(dispose!2)
 
-; 
+
+(defn start []
+  (dispose!)
+  (start-processing-feed tickerplant :ctrader2 account-in-f)
+  
+
+  )
+
+(comment 
+
+  (stop-processing-feed tickerplant :ctrader2)
+  
+  tickerplant
+
+  (dispose!2)
+
+;
+  )
+
+(defn start-cli [& _]
+  (start)
+  @(promise))

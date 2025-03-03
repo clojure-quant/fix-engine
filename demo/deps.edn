@@ -9,6 +9,7 @@
           :main-opts  ["-m" "nrepl.cmdline"]}
 
   :demo1 {:exec-fn  demo.demo1/start-cli}
+  :demo2 {:exec-fn  demo.demo2/start-cli}
 
   :demo {:exec-fn  demo.quote-harvest/start-harvesting}
 
