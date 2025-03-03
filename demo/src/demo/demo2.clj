@@ -26,9 +26,6 @@ fix-engine
               (log "QUOTE IN" v)) nil account-in-f))
 
 
-(def dispose! 
-  (account-in-printer #(log "demo-task completed" %)
-                      #(log "demo-task crash " %)))
 
 (def tickerplant (create-bargenerator))
 
@@ -42,24 +39,30 @@ fix-engine
   (m/reduce (fn [_ v] (println "demo in:" v)) nil account-in-f2))
 
 
-(def dispose!2
-  (account-in-printer2 prn prn))
+
 
 
 
 (defn start []
-  (dispose!)
+
+  (def dispose!
+    (account-in-printer #(log "demo-task completed" %)
+                        #(log "demo-task crash " %)))
+
   (start-processing-feed tickerplant :ctrader2 account-in-f)
   
 
   )
 
 (comment 
-
+  
+  (dispose!)
   (stop-processing-feed tickerplant :ctrader2)
   
   tickerplant
 
+  (def dispose!2
+    (account-in-printer2 prn prn))
   (dispose!2)
 
 ;

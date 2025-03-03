@@ -9,7 +9,7 @@
 
 (defn log-quotes [quotes]
   (let [sw (StringWriter.)
-        _ (.write sw "\n")
+        _ (.write sw "\n\n\n")
         _ (doall
            (for [quote quotes]
              (let [quote-str (str "\n" quote)]
@@ -35,7 +35,7 @@
 
 (defn start-processing-feed [this market-kw quote-f]
   (let [equote-f (extended-quote-f market-kw quote-f) 
-        quote-block-f (m/eduction (partition-all 10) equote-f)
+        quote-block-f (m/eduction (partition-all 100) equote-f)
         quote-writer-t (m/reduce (fn [_ quotes] 
                                    (log-quotes quotes)
                                    nil) 
