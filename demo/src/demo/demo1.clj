@@ -3,7 +3,7 @@
    [missionary.core :as m]
    [nano-id.core :refer [nano-id]]
    [fix-translator.session :refer [load-accounts create-session decode-msg]] 
-   [fix-translator.ctrader :refer [write-assets]]
+   [fix-translator.ctrader :refer [seclist->assets write-assets]]
    [fix-engine.impl.socket :refer [create-client]]
    [fix-engine.logger :refer [log]]
    ))
@@ -48,7 +48,8 @@
   (let [msg-type-payload (decode-msg this fix-msg)
         [msg-type payload] msg-type-payload]
     (when (= msg-type "y")
-      (write-assets msg-type-payload))))
+      (-> msg-type-payload seclist->assets write-assets)
+      )))
 
 (defn consume-incoming [{:keys [decoder in-flow] :as this}]
   (let [log-msg (fn [_ v]

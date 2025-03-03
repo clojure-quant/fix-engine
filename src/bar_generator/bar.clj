@@ -1,4 +1,6 @@
-(ns bar-generator.bar)
+(ns bar-generator.bar
+  
+  )
 
 (defn add-trade [{:keys [_open high low volume ticks] :as bar} {:keys [price] :as trade}]
   (assoc bar 
@@ -8,10 +10,11 @@
          :volume (+ volume (:volume trade))
          :ticks (inc ticks)))
 
-(defn create-bar [trades]
+(defn create-bar [dt trades]
   (let [[first-trade & trades] trades
         {:keys [price volume asset]} first-trade
-        initial-bar {:asset asset
+        initial-bar {:date dt
+                     :asset asset
                      :open price
                      :high  price
                      :low  price
@@ -21,25 +24,23 @@
     (reduce add-trade initial-bar trades)))
 
 (comment 
-(create-bar
+  (require '[tick.core :as t])
+(create-bar (t/instant)
  [{:volume 3, :asset "B", :price 9.999495246345742}
   {:volume 34, :asset "B", :price 9.982399541778701}
   {:volume 44, :asset "B", :price 9.947307942516321}
   {:volume 21, :asset "B", :price 9.912512426148753}])  
  ; 
   )
-
  
-(defn create-bars [trades]
+(defn create-bars [dt trades]
   (->> trades 
        (group-by :asset)       
        vals
-       (map create-bar)
+       (map (partial create-bar dt))
        ))
   
 (comment 
-  
-
   (def trades [{:volume 3, :asset "B", :price 9.999495246345742}
                {:volume 34, :asset "B", :price 9.982399541778701}
                {:volume 64, :asset "A", :price 0.9951227736065371}
@@ -47,8 +48,8 @@
                {:volume 44, :asset "B", :price 9.947307942516321}
                {:volume 0, :asset "C", :price 100.06071524588565}
                {:volume 21, :asset "B", :price 9.912512426148753}])
-
-  (create-bars trades)
+  (require '[tick.core :as t])
+  (create-bars (t/instant) trades)
  ;  
   )
 

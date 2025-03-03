@@ -49,7 +49,7 @@ fix-engine
     (account-in-printer #(log "demo-task completed" %)
                         #(log "demo-task crash " %)))
 
-  (start-processing-feed tickerplant :ctrader2 account-in-f)
+  (start-processing-feed tickerplant :ctrader2 account-in-f 60000)
   
 
   )
