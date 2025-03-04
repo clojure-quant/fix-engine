@@ -105,6 +105,7 @@
              (log-time "qi" (str "crash: " {:msg (ex-message ex) :data (ex-data ex)}))
                 ;(println "quote interactor crashed: " ex)
              )))))))
+
 (defn only-quotes [fix-session fix-in-f]
   (log-time "only-quotes s:" (keys fix-session))
   (m/eduction
