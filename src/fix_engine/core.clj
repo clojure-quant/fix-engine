@@ -1,9 +1,8 @@
 (ns fix-engine.core
   (:require
    [fix-engine.impl.account]
-   [fix-engine.impl.quotes :refer [create-quote-interactor only-quotes] ]
-   [fix-translator.session :refer [create-session]]
-   ))
+   [fix-engine.impl.quotes :refer [create-quote-interactor only-quotes]]
+   [fix-translator.session :refer [create-session]]))
 
 (defn create-fix-engine
   "creates a fix-engine instance"
@@ -19,11 +18,8 @@
   [this account-kw interactor]
   (fix-engine.impl.account/get-session this account-kw interactor))
 
-
 (defn get-quote-session [this  account-kw]
   (let [session (get-session this account-kw create-quote-interactor)
         decoder (create-session (:accounts this) account-kw)]
     ;session
-    (only-quotes decoder session)
-    )
-  )
+    (only-quotes decoder session)))

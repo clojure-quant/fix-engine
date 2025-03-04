@@ -1,9 +1,6 @@
 (ns fix-engine.impl.mutil
   (:import
-   [java.util.concurrent.locks ReentrantLock]
-  )
-  )
-
+   [java.util.concurrent.locks ReentrantLock]))
 
 (defn rlock []
   (ReentrantLock.))

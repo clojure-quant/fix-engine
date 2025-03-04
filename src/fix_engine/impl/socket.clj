@@ -51,7 +51,6 @@
 (defn encode-fix-msg-no-log [this fix-type-payload-vec]
   (encode-msg this fix-type-payload-vec))
 
-
 (defn connected? [stream]
   (when stream
     (let [desc (s/description stream)]
@@ -59,12 +58,11 @@
        (not (-> desc :sink :closed?))
        (not (-> desc :source :closed?))))))
 
-
 (defn create-msg-writer [this stream]
   (let [log-out-payload (get-in this [:config :log-out-payload])
         log-out-fix (get-in this [:config :log-out-fix])
         encode-fix-msg (if log-out-fix
-                         encode-fix-msg-log 
+                         encode-fix-msg-log
                          encode-fix-msg-no-log)]
     (fn [fix-type-payload-vec]
       (when-not (connected? stream)
@@ -73,7 +71,7 @@
             result-d (s/put! stream data)
             result-t (deferred->task result-d)]
         (m/sp
-         (when log-out-fix 
+         (when log-out-fix
            (log "OUT-FIX" (pr-str data)))
          (let [r (m/? result-t)]
          ;(log "send-result " r)

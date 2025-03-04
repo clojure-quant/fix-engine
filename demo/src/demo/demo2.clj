@@ -1,15 +1,14 @@
 (ns demo.demo2
   (:require
    [missionary.core :as m]
-   [fix-engine.core :refer [create-fix-engine configured-accounts 
+   [fix-engine.core :refer [create-fix-engine configured-accounts
                             get-quote-session]]
    [fix-engine.logger :refer [log]]
-   [bar-generator.core :refer [create-bargenerator start-processing-feed stop-processing-feed]]
-   ))
+   [quanta.bar.generator :refer [start-generating stop-generating]]))
 
 ;; CREATE FIX ENGINE
 
-(def fix-engine 
+(def fix-engine
   (create-fix-engine "fix-accounts.edn"))
 
 (configured-accounts fix-engine)
@@ -22,43 +21,27 @@ fix-engine
   (get-quote-session fix-engine :ctrader-tradeviewmarkets2-quote))
 
 (def account-in-printer
-  (m/reduce (fn [_ v] 
+  (m/reduce (fn [_ v]
               (log "QUOTE IN" v)) nil account-in-f))
-
-
-
-(def tickerplant (create-bargenerator))
-
-;; bad ip
-
-(def account-in-f2
-  (get-quote-session fix-engine :account-invalid-ip))
-
-
-(def account-in-printer2
-  (m/reduce (fn [_ v] (println "demo in:" v)) nil account-in-f2))
-
-
-
-
-
 
 (defn start []
 
-  #_(def dispose!
+  (println "starting ctrader quote printer..")
+  (def dispose!
     (account-in-printer #(log "demo-task completed" %)
                         #(log "demo-task crash " %)))
 
-  (start-processing-feed tickerplant :ctrader2 account-in-f 60000)
-  
+  (println "starting generator..")
 
-  )
+  (start-generating
+   account-in-f
+   [:forex :m]))
 
-(comment 
-  
+(comment
+
   (dispose!)
-  (stop-processing-feed tickerplant :ctrader2)
-  
+  (stop-generating [:crypto :m])
+
   tickerplant
 
   (def dispose!2
@@ -71,3 +54,18 @@ fix-engine
 (defn start-cli [& _]
   (start)
   @(promise))
+
+;; bad ip
+
+(def account-in-f2
+  (get-quote-session fix-engine :account-invalid-ip))
+
+(def account-in-printer2
+  (m/reduce (fn [_ v] (println "demo in:" v)) nil account-in-f2))
+
+(def assets ["EUR/USD" "GBP/USD" "EUR/JPY"
+             "USD/JPY" "AUD/USD" "USD/CHF"
+             "GBP/JPY" "USD/CAD" "EUR/GBP"
+             "EUR/CHF"  "NZD/USD" "USD/NOK"
+             "USD/ZAR" "USD/SEK" "USD/MXN"])
+

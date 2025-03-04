@@ -3,7 +3,6 @@
    [missionary.core :as m])
   (:import missionary.Cancelled))
 
-
 (def a-f (m/seed (range 10)))
 
 (defn start-flow-printer [f]
@@ -11,7 +10,6 @@
                       (println "data: " v)) nil f)]
     (t #(println "printer completed" %)
        #(println "printer crash " %))))
-
 
 (start-flow-printer a-f)
 
@@ -22,7 +20,6 @@
 
 (start-flow-printer b-f)
 
-
 (def c-f
   (m/ap
    (let [data (m/?> a-f)]
@@ -32,7 +29,6 @@
               ;(reduced data)
        data))))
 
-
 (start-flow-printer c-f)
 
 (def d-f
@@ -40,10 +36,9 @@
    (loop [data (m/?< a-f)]
      (let [done? (> data 4)]
        (m/amb
-         data
+        data
         (when-not done?
           (recur (m/?< a-f))))))))
-   
 
 (start-flow-printer d-f)
 

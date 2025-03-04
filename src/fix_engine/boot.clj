@@ -20,7 +20,6 @@
 
 (def retry-delays (map (partial * 100) (next fib)))
 
-
 (defn r-subject-at [^objects arr slot]
   (fn [!]
     (aset arr slot !)

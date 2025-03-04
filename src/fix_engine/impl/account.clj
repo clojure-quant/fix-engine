@@ -9,7 +9,7 @@
 
 (defn create-account-session [{:keys [accounts] :as this} account-kw create-interactor]
   (log "acc" (str "loading fix account " account-kw))
-  (let [this (create-session accounts account-kw) 
+  (let [this (create-session accounts account-kw)
         _ (println "session created")
         get-in-t (m/dfv) ; single assignment variable
         interactor (create-interactor)
@@ -39,7 +39,6 @@
             )
           (log-time "acc" "flow is nil.")))))))
 
-
 (defn create-fix-engine [fix-config-file]
   {:accounts (load-accounts fix-config-file)
    :account-lock (rlock)
@@ -47,7 +46,7 @@
 
 (defn get-session [{:keys [accounts account-lock sessions] :as this} account-kw interactor]
   (if-let [session (get @sessions account-kw)]
-    session 
+    session
     (if (contains? accounts account-kw)
       (with-lock account-lock
         (println "creating fix session " account-kw)

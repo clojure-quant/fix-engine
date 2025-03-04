@@ -3,7 +3,7 @@
    [missionary.core :as m])
   (:import missionary.Cancelled))
 
-(defn data-generator [c] 
+(defn data-generator [c]
   (m/ap
    (loop [[x & r] (range c)]
      (m/amb
@@ -18,19 +18,17 @@
     (t #(println "printer completed" %)
        #(println "printer crash " %))))
 
-
 (start-flow-printer (data-generator 20))
 
 (def conn-f
-  (m/ap 
+  (m/ap
    (loop [[flow-id & r] [:a :b :c]]
      (m/? (m/sleep 500))
-     (m/amb 
+     (m/amb
       [flow-id (data-generator 20)]
       (if (seq r)
         (recur r)
-        (m/amb)
-        )))))
+        (m/amb))))))
 
 (def curr-conn-f
   (m/ap

@@ -3,11 +3,9 @@
    [fix-translator.session :refer [load-accounts create-session
                                    encode-msg]]))
 
-
 (def fix-config "fix-accounts.edn")
 ;(def account :ctrader-tradeviewmarkets-quote)
 (def account :ctrader-tradeviewmarkets2-quote)
-
 
 (def s (-> (load-accounts fix-config)
            (create-session account)))

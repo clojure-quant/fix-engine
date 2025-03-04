@@ -17,7 +17,7 @@
 (->> t/now
      (t/in "UTC")
     ;(t/format formatter)
-    )
+     )
 
 (defn now-utc []
   (-> (t/now)
@@ -26,19 +26,14 @@
 (now-utc)
 
 (->> (now-utc)
-    (t/format formatter)
-    )
-  
+     (t/format formatter))
 
-  (->> (t/now)
-       (t/in "UTC" )
-      
+(->> (t/now)
+     (t/in "UTC")
+
       ;(tick/date) 
      ;(t/format formatter)  
-    )
-
-
-
+     )
 (defn timestamp
   "Returns a UTC timestamp in a specified format."
   ([]

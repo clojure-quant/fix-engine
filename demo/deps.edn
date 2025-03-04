@@ -1,6 +1,8 @@
 {:paths ["src"]
  :deps {org.clojure/clojure    {:mvn/version "1.11.1"}
-        clojure-quant/fix-engine {:local/root ".." :deps/manifest :deps}}
+        io.github.clojure-quant/fix-engine {:local/root ".." :deps/manifest :deps}
+        io.github.clojure-quant/quanta-bar-warehouse {:mvn/version "0.1.41"}
+        }
  :aliases
  {
 
@@ -9,9 +11,9 @@
           :main-opts  ["-m" "nrepl.cmdline"]}
 
   :demo1 {:exec-fn  demo.demo1/start-cli}
-  :demo2 {:exec-fn  demo.demo2/start-cli}
 
-  :demo {:exec-fn  demo.quote-harvest/start-harvesting}
+  :demo2 {:exec-fn  demo.demo2/start-cli}
+  
 
 ;
   }}
