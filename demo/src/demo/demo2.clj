@@ -42,8 +42,6 @@ fix-engine
   (dispose!)
   (stop-generating [:crypto :m])
 
-  tickerplant
-
   (def dispose!2
     (account-in-printer2 prn prn))
   (dispose!2)
