@@ -4,7 +4,9 @@
    [fix-engine.core :refer [create-fix-engine configured-accounts
                             get-quote-session]]
    [fix-engine.logger :refer [log]]
-   [quanta.bar.generator :refer [start-generating stop-generating]]))
+   [quanta.bar.generator :refer [start-generating]]
+   [quanta.bar.db.duck :as duck]
+   ))
 
 ;; CREATE FIX ENGINE
 
@@ -32,10 +34,16 @@ fix-engine
                         #(log "demo-task crash " %)))
 
   (println "starting generator..")
-
+  (def db-duck (duck/start-bardb-duck "ctrader-quotes.ddb"))
+  
   (start-generating
-   account-in-f
-   [:forex :m]))
+    {:db db-duck}
+    account-in-f
+    [:forex :m])
+;
+)
+
+
 
 (comment
 

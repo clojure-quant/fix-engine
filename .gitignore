@@ -18,3 +18,7 @@ demo/.calva
 demo/quotes.log
 demo/msg1.log
 demo/bars.log
+demo/binaries
+demo/classes/*
+*.ddb
+*.wal
