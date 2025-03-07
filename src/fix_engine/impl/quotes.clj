@@ -68,7 +68,7 @@
                          nil in-flow)
             login-msg (login-payload fix-session)
             ;assets ["1" "2" "3"]
-            assets (->> (range 30)
+            assets (->> (range 45)
                         (map inc)
                         (map str))
             subscribe-msg (subscribe-payload assets)
