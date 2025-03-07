@@ -5,12 +5,15 @@
         aleph/aleph {:mvn/version "0.8.3"}
         babashka/fs {:mvn/version "0.5.24"}
         nano-id/nano-id {:mvn/version "1.1.0"}
-        io.github.clojure-quant/fix-encoding {:git/sha "7e0c2895b3280ea36d5bc7494e23463dd089c12a"}
+        io.github.clojure-quant/fix-encoding {:mvn/version "0.1.66"}
+        ;io.github.clojure-quant/fix-encoding {:git/sha "7e0c2895b3280ea36d5bc7494e23463dd089c12a"}
         ;io.github.clojure-quant/fix-encoding {:local/root "../fix-encoding" :deps/manifest :deps}
         }
 
  :aliases
- {
+ {:build {:deps {io.github.clojure/tools.build {:mvn/version "0.9.6"}
+                 slipset/deps-deploy {:mvn/version "0.2.1"}}
+        :ns-default build}
 
 ;
   }}

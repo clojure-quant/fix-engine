@@ -1,4 +1,5 @@
-# fix-engine
+# fix-engine [![GitHub Actions status |clojure-quant/fix-engine](https://github.com/clojure-quant/fix-engine/workflows/CI/badge.svg)](https://github.com/clojure-quant/fix-engine/actions?workflow=CI)[![Clojars Project](https://img.shields.io/clojars/v/io.github.clojure-quant/fix-engine.svg)](https://clojars.org/io.github.clojure-quant/fix-engine)
+
 
 ## What is it?
 clj-fix is a toolkit that makes it easy for you to create your own [FIX](http://www.fixprotocol.org/what-is-fix.shtml) client.
