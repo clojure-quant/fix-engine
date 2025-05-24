@@ -62,7 +62,25 @@
                                  (reset! (:converter fix-session) converter)
                                  (log-time "asset-id-converter" (str "created with " (count assets) "assets"))
                                  (log-time "converter new: " @(:converter fix-session))
-                                 (log-time "fix-session keys: " (keys fix-session)))))
+                                 (log-time "fix-session keys: " (keys fix-session))))
+                             
+                             (when (= msg-type "3")
+                               (log-time "fix-reject" (str payload)))
+                             
+                             (when (= msg-type "4")
+                               (log-time "fix-seq-reset" (str payload)))
+                             
+                             (when (= msg-type "5")
+                               (log-time "fix-logout" (str payload)))
+                                                          
+                             (when (= msg-type "j")
+                               (log-time "fix-business-reject" (str payload)))
+                             
+                             (when (= msg-type "Y")
+                               (log-time "fix-market-data-reject" (str payload)))
+                             
+                             
+                             )
 
                            nil)
                          nil in-flow)
