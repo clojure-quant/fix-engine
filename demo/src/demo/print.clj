@@ -1,10 +1,8 @@
 (ns demo.print
-  (:require 
-    [missionary.core :as m]
+  (:require
+   [missionary.core :as m]
    [ta.db.bars.protocol :as b]
-     [quanta.bar.db.duck :as duck]
-   )
-  )
+   [quanta.bar.db.duck :as duck]))
 
 
 

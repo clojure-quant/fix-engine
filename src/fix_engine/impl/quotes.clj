@@ -54,7 +54,7 @@
                            (let [fix-type-payload (decode-msg fix-session msg)
                                  [msg-type payload] fix-type-payload]
                              (when (= msg-type "y")
-                               (log-time "SEC-LIST" "RCVD")
+                               (log-time "SEC-LIST" "RCVD!")
                                (let [assets (seclist->assets fix-type-payload)
                                      converter (create-asset-converter assets)]
                                  (write-assets assets)
@@ -63,7 +63,10 @@
                                  (log-time "asset-id-converter" (str "created with " (count assets) "assets"))
                                  (log-time "converter new: " @(:converter fix-session))
                                  (log-time "fix-session keys: " (keys fix-session))))
-                             
+
+                             (when (= msg-type "2")
+                               (log-time "fix-resend" (str payload)))
+
                              (when (= msg-type "3")
                                (log-time "fix-reject" (str payload)))
                              
@@ -72,7 +75,7 @@
                              
                              (when (= msg-type "5")
                                (log-time "fix-logout" (str payload)))
-                                                          
+                             
                              (when (= msg-type "j")
                                (log-time "fix-business-reject" (str payload)))
                              
@@ -125,7 +128,7 @@
              )))))))
 
 (defn only-quotes [fix-session fix-in-f]
-  (log-time "only-quotes s:" (keys fix-session))
+  (log-time "only-quotes keys:" (keys fix-session))
   (m/eduction
    (remove nil?) ; in the end a nil message is received, dont parse this 
    (map (partial decode-msg fix-session))
