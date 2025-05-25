@@ -74,8 +74,13 @@
                                (log-time "fix-seq-reset" (str payload)))
                              
                              (when (= msg-type "5")
-                               (log-time "fix-logout" (str payload)))
-                             
+                               (log-time "fix-logout" (str payload))
+                               ; this is received after a weekend.
+                               ; 2025-05-25T21:59:59.957297738Z fix-logout: {:text "Session reset"}
+                               ; fix-logout: {:text "Session reset"}  
+                               (throw (ex-info "session-reset" {:msg "logout message received!"
+                                                                :text (str payload)})))
+                                                          
                              (when (= msg-type "j")
                                (log-time "fix-business-reject" (str payload)))
                              
