@@ -33,7 +33,7 @@
 
 (defn create-decoder []
   (-> (load-accounts "fix-accounts.edn")
-      (create-session :ctrader-tradeviewmarkets2-quote)))
+      (create-session :ctrader-fxpro-quote)))
 
 (defn send-msg [{:keys [decoder send-fix-msg]} fix-type-payload-vec]
   (log "send-data" fix-type-payload-vec)
