@@ -2,8 +2,8 @@
   (:require
    [missionary.core :as m]
    [nano-id.core :refer [nano-id]]
-   [fix-translator.session :refer [load-accounts create-session decode-msg]]
    [fix-translator.ctrader :refer [seclist->assets write-assets]]
+   [fix-engine.impl.session :refer [create-session decode-msg]]
    [fix-engine.impl.socket :refer [create-client]]
    [fix-engine.logger :refer [log]]))
 
@@ -32,8 +32,20 @@
         :security-list-request-type :symbol}])
 
 (defn create-decoder []
-  (-> (load-accounts "fix-accounts.edn")
-      (create-session :ctrader-fxpro-quote)))
+  (create-session {:spec "fix-specs/ctrader.edn"
+                   :header {:begin-string "FIX.4.4"
+                            :target-comp-id "CSERVER"
+                            :sender-comp-id "live.fxpro.8284171"
+                            :target-sub-id "QUOTE"
+                            :sender-sub-id "QUOTE"}
+                   :host "live-uk-eqx-01.p.c-trader.com"
+                   :port 5201 ; plain text
+                         ;ssl-port 5211
+                   :username "8284171"
+                   :password "Regenschirm13!"
+                   :log-out-payload false
+                   :log-out-fix false
+                   :log-in-fix true}))
 
 (defn send-msg [{:keys [decoder send-fix-msg]} fix-type-payload-vec]
   (log "send-data" fix-type-payload-vec)

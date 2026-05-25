@@ -2,6 +2,7 @@
   (:require
    [fix-engine.impl.account]
    [fix-engine.impl.quotes :refer [create-quote-interactor only-quotes]]
+   [fix-engine.impl.trade :refer [create-trade-interactor]]
    [fix-translator.session :refer [create-session]]))
 
 (defn create-fix-engine
@@ -20,6 +21,14 @@
 
 (defn get-quote-session [fix-engine  account-kw]
   (let [ {:keys [session out-f]} (get-session fix-engine account-kw create-quote-interactor)
+        ;decoder (create-session (:accounts fix-engine) account-kw)
+        ]
+    ;session
+    (only-quotes session out-f)))
+
+
+(defn get-trade-session [fix-engine  account-kw]
+  (let [{:keys [session out-f]} (get-session fix-engine account-kw create-trade-interactor)
         ;decoder (create-session (:accounts fix-engine) account-kw)
         ]
     ;session

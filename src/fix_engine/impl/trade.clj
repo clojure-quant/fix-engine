@@ -1,13 +1,16 @@
-(ns fix-engine.impl.quotes
+(ns fix-engine.impl.trade
   (:require
    [missionary.core :as m]
    [nano-id.core :refer [nano-id]]
    [fix-engine.logger :refer [log log-time]]
-   [fix-engine.impl.session :refer [decode-msg]]
+   [fix-engine.impl.account :refer [create-account-session]]
+   [fix-translator.session :refer [decode-msg]]
    [fix-translator.ctrader :refer [subscribe-payload
                                    ->quote incoming-quote-id-convert
                                    seclist->assets write-assets create-asset-converter]])
   (:import missionary.Cancelled))
+
+
 
 (defn login-payload [fix-session]
   ["A"
@@ -35,13 +38,16 @@
        (throw (ex-info "No message received after specified time" {::type ::timeout, ::time-seconds (int (/ time 1000))})))
      (recur))))
 
-(defn create-quote-interactor []
-  (let [interactor-state (atom {})]
+
+(defn create-trade-interactor []
+  (let [incoming-action-stream (m/rdv)
+
+        interactor-state (atom {})]
     (fn [fix-session conn]
-  ; this fn gets called whenever the connection is established.
+                            ; this fn gets called whenever the connection is established.
       (let [{:keys [send-fix-msg in-flow]} conn
-            ;config (:config fix-session)
-            ;_ (log "QI CONFIG: " config)
+                                      ;config (:config fix-session)
+                                      ;_ (log "QI CONFIG: " config)
             log-in-fix (get-in fix-session [:config :log-in-fix])
             keepalive-mailbox (m/mbx)
 
@@ -58,7 +64,7 @@
                                (let [assets (seclist->assets fix-type-payload)
                                      converter (create-asset-converter assets)]
                                  (write-assets assets)
-                                 ;(log-time "KEYS:" (keys fix-session))
+                                                           ;(log-time "KEYS:" (keys fix-session))
                                  (reset! (:converter fix-session) converter)
                                  (log-time "asset-id-converter" (str "created with " (count assets) "assets"))
                                  (log-time "converter new: " @(:converter fix-session))
@@ -69,31 +75,28 @@
 
                              (when (= msg-type "3")
                                (log-time "fix-reject" (str payload)))
-                             
+
                              (when (= msg-type "4")
                                (log-time "fix-seq-reset" (str payload)))
-                             
+
                              (when (= msg-type "5")
                                (log-time "fix-logout" (str payload))
-                               ; this is received after a weekend.
-                               ; 2025-05-25T21:59:59.957297738Z fix-logout: {:text "Session reset"}
-                               ; fix-logout: {:text "Session reset"}  
+                                                         ; this is received after a weekend.
+                                                         ; 2025-05-25T21:59:59.957297738Z fix-logout: {:text "Session reset"}
+                                                         ; fix-logout: {:text "Session reset"}  
                                (throw (ex-info "session-reset" {:msg "logout message received!"
                                                                 :text (str payload)})))
-                                                          
+
                              (when (= msg-type "j")
                                (log-time "fix-business-reject" (str payload)))
-                             
+
                              (when (= msg-type "Y")
-                               (log-time "fix-market-data-reject" (str payload)))
-                             
-                             
-                             )
+                               (log-time "fix-market-data-reject" (str payload))))
 
                            nil)
                          nil in-flow)
             login-msg (login-payload fix-session)
-            ;assets ["1" "2" "3"]
+                                      ;assets ["1" "2" "3"]
             assets (->> (range 45)
                         (map inc)
                         (map str))
@@ -117,7 +120,7 @@
            (m/? (send-fix-msg subscribe-msg))
            (log-time "qi" "will send security-list msg")
            (m/? (send-fix-msg sec-list-msg2))
-           ;(m/? process-msg)
+                                     ;(m/? process-msg)
            (m/? (m/join vector
                         process-msg
                         heartbeat-t
@@ -125,12 +128,14 @@
            (log-time "qi" "process-msg finished. (session disconnect)")
            (catch Cancelled _
              (log-time "qi" "got cancelled")
-             ;(m/? shutdown!)
+                                       ;(m/? shutdown!)
              true)
            (catch Exception ex
              (log-time "qi" (str "crash: " {:msg (ex-message ex) :data (ex-data ex)}))
-                ;(println "quote interactor crashed: " ex)
+                                          ;(println "quote interactor crashed: " ex)
              )))))))
+
+
 
 (defn only-quotes [fix-session fix-in-f]
   (log-time "only-quotes keys:" (keys fix-session))
@@ -141,6 +146,31 @@
    (remove nil?)
    (map (partial incoming-quote-id-convert fix-session))
    fix-in-f)
-    ;fix-in-f
+                              ;fix-in-f
   )
+
+
+(defn create-fix-broker-trade [{:keys [accounts] :as fix-engine} account-kw broker-trade-req-f]
+  (let [process-req-rdv (m/rdv)
+        broker-trade-res-f (m/rdv)
+        process-req-f (m/ap 
+                       (let [req (m/?> ##Inf broker-trade-req-f)
+                             push-result (m/? (m/race
+                                               (process-req-rdv req)
+                                               (m/sleep 5000 {:timeout req
+                                                              :message "request could not be sent within timeout window."})))]
+                         (m/? (broker-trade-res-f push-result))
+                         push-result
+                         ))
+        process-req-t (m/reduce (fn [_ v]
+                                  (println "data: " v)) nil process-req-f)
+        cancel-process-req! (process-req-t #(println "fix-broker-trade-processor completed" %)
+                                           #(println "fix-broker-trade-processor crash " %))
+        ;session (create-account-session fix-engine account-kw create-trade-interactor)
+        ]
+     {:broker-trade-req-f broker-trade-req-f
+      :broker-trade-res-f broker-trade-res-f
+      :cancel-process-req! cancel-process-req!}
+    
+    ))
 

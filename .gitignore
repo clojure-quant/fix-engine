@@ -20,5 +20,6 @@ demo/msg1.log
 demo/bars.log
 demo/binaries
 demo/classes/*
+demo/*.log
 *.ddb
 *.wal
