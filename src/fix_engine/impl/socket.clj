@@ -6,7 +6,7 @@
    [manifold.stream :as s]
    [gloss.io :as io]
    [fix-translator.gloss :refer [fix-protocol xf-fix-message without-header]]
-   [fix-translator.session :refer [encode-msg]]
+   [fix-translator.session :refer [payload->fix-msg-vec]]
    [fix-engine.logger :refer [log]]))
 
 ;; manifold stuff
@@ -46,10 +46,10 @@
 
 (defn encode-fix-msg-log [this fix-type-payload-vec]
   (log "OUT-PAYLOAD" fix-type-payload-vec)
-  (encode-msg this fix-type-payload-vec))
+  (payload->fix-msg-vec this fix-type-payload-vec))
 
 (defn encode-fix-msg-no-log [this fix-type-payload-vec]
-  (encode-msg this fix-type-payload-vec))
+  (payload->fix-msg-vec this fix-type-payload-vec))
 
 (defn connected? [stream]
   (when stream

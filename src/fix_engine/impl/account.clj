@@ -1,15 +1,14 @@
 (ns fix-engine.impl.account
   (:require
    [missionary.core :as m]
-   [fix-translator.session :refer [load-accounts create-session]]
+   [fix-engine.impl.session :refer [create-session]]
    [fix-engine.boot :refer [boot-with-retry]]
-   [fix-engine.logger :refer [log log-time]]
-   [fix-engine.impl.mutil :refer [rlock with-lock]])
+   [fix-engine.logger :refer [log log-time]])
   (:import missionary.Cancelled))
 
-(defn create-account-session [{:keys [accounts] :as fix-engine} account-kw create-interactor]
-  (log "acc" (str "loading fix account " account-kw))
-  (let [session (create-session accounts account-kw)
+(defn create-account-session [account-config create-interactor]
+  ;(log "acc" (str "loading fix account " account-kw))
+  (let [session (create-session account-config)
         _ (println "session created")
         get-in-t (m/dfv) ; single assignment variable
         interactor (create-interactor)
@@ -37,26 +36,6 @@
                                         ;  (log "acc" "disposed success")
                                     ;)
                               )
-                            (log-time "acc" "flow is nil.")))))
-        ] 
-    {:session session 
-     :out-f session-out-f}
-    ))
-
-(defn create-fix-engine [fix-config-file]
-  {:accounts (load-accounts fix-config-file)
-   :account-lock (rlock)
-   :sessions (atom {})})
-
-(defn get-session [{:keys [accounts account-lock sessions] :as fix-engine} account-kw interactor]
-  (if-let [session (get @sessions account-kw)]
-    session
-    (if (contains? accounts account-kw)
-      (with-lock account-lock
-        (println "creating fix session " account-kw)
-        (let [session (create-account-session fix-engine account-kw interactor)]
-          (println "storing session")
-          (swap! sessions assoc account-kw session)
-          session))
-      (throw (ex-info "unknown account" {:account account-kw :available-accounts (keys accounts)})))))
-
+                            (log-time "acc" "flow is nil.")))))]
+    {:session session
+     :out-f session-out-f}))

@@ -20,7 +20,7 @@ fix-engine
 ;; QUOTES FLOW
 
 (def account-in-f
-  (get-quote-session fix-engine :ctrader-tradeviewmarkets2-quote))
+  (get-quote-session fix-engine  :ctrader-fxpro-quote))
 
 (def account-in-printer
   (m/reduce (fn [_ v]
@@ -34,7 +34,7 @@ fix-engine
                         #(log "demo-task crash " %)))
 
   (println "starting generator..")
-  (def db-duck (duck/start-bardb-duck "ctrader-quotes.ddb"))
+  (def db-duck (duck/start-bardb-duck "ctrader-quotes-2026.ddb"))
   
   (start-generating
     {:db db-duck}

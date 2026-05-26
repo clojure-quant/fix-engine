@@ -13,6 +13,8 @@
 
   :demo2 {:exec-fn  demo.demo2/start-cli}
   
+  :demo3 {:exec-fn  demo.demo3/start-cli}
+
   :print {:exec-fn  demo.print/print-cli}
 
 ;

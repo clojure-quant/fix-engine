@@ -3,7 +3,7 @@
    [missionary.core :as m]
    [nano-id.core :refer [nano-id]]
    [fix-engine.logger :refer [log log-time]]
-   [fix-engine.impl.session :refer [decode-msg]]
+   [fix-translator.session :refer [decode-msg fix-msg-vec->payload]]
    [fix-translator.ctrader :refer [subscribe-payload
                                    ->quote incoming-quote-id-convert
                                    seclist->assets write-assets create-asset-converter]])
@@ -94,7 +94,7 @@
                          nil in-flow)
             login-msg (login-payload fix-session)
             ;assets ["1" "2" "3"]
-            assets (->> (range 45)
+            assets (->> (range 10)
                         (map inc)
                         (map str))
             subscribe-msg (subscribe-payload assets)

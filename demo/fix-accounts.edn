@@ -63,11 +63,11 @@
  :ctrader-fxpro-trade
  {:spec "fix-specs/ctrader.edn"
   :header {:begin-string "FIX.4.4"
-           :target-comp-id "cServer"
+           :target-comp-id "CSERVER"
            :sender-comp-id "live.fxpro.8284171"
            :target-sub-id "TRADE"
            :sender-sub-id "TRADE"}
-  :host "demo-uk-eqx-01.p.c-trader.com"
+  :host "live-uk-eqx-01.p.c-trader.com"
   :port 5202 ; plain text
     ;ssl-port 5211
   :username "8284171"

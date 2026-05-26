@@ -1,13 +1,11 @@
 (ns fix-engine.impl.session
-  (:require
-   [clojure.edn :as edn]
+  (:require 
    [tick.core :as t]
    [fix-translator.schema :refer [create-decoder]]
    [fix-translator.message :refer [fix->payload
                                    encode-fix-msg]]))
 
-#_(defn load-accounts [accounts-edn-file]
-  (-> accounts-edn-file slurp edn/read-string))
+
 
 (defn create-session  [account-config]
   {:config account-config
