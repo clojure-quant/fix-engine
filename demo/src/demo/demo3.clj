@@ -19,7 +19,12 @@
   [:heartbeat
    {:test-request-id  (nano-id 5)}])
 
-(defn create-decoder []
+(defn position-request []
+  [:request-for-positions
+   {:pos-req-id  (nano-id 5)}])
+
+
+(defn create-decoder1 []
   (create-session {:spec "fix-specs/ctrader.edn"
                    :header {:begin-string "FIX.4.4"
                             :target-comp-id "CSERVER"
@@ -35,8 +40,21 @@
                    :log-out-fix false
                    :log-in-fix true}))
 
-
-
+(defn create-decoder []
+  (create-session {:spec "fix-specs/ctrader.edn"
+                   :header {:begin-string "FIX.4.4"
+                            :target-comp-id "CSERVER"
+                            :sender-comp-id "demo.pepperstone.5292473"
+                            :target-sub-id "TRADE"
+                            :sender-sub-id "TRADE"}
+                   :host "demo-us-eqx-01.p.c-trader.com"
+                   :port 5202 ; plain text (trade); quote uses 5201
+                      ;ssl-port 5211
+                   :username "5292473"
+                   :password "Regenschirm13!"
+                   :log-out-payload false
+                   :log-out-fix false
+                   :log-in-fix true}))
 
 
 (defn send-msg [{:keys [decoder send-fix-msg]} fix-type-payload-vec]
@@ -94,6 +112,9 @@
 
     (send-msg this login-msg)
     (send-demo-orders this)
+    (Thread/sleep 10000)
+    (send-msg this (position-request))
+
 
     this))
 
