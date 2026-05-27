@@ -1,12 +1,11 @@
-(ns demo.demo2
+(ns demo.cli-engine-quote-db
   (:require
    [missionary.core :as m]
    [fix-engine.core :refer [create-fix-engine configured-accounts
                             get-quote-session]]
    [fix-engine.logger :refer [log]]
    [quanta.bar.generator :refer [start-generating]]
-   [quanta.bar.db.duck :as duck]
-   ))
+   [quanta.bar.db.duck :as duck]))
 
 ;; CREATE FIX ENGINE
 
@@ -35,43 +34,15 @@ fix-engine
 
   (println "starting generator..")
   (def db-duck (duck/start-bardb-duck "ctrader-quotes-2026.ddb"))
-  
+
   (start-generating
-    {:db db-duck}
-    account-in-f
-    [:forex :m])
-;
-)
-
-
-
-(comment
-
-  (dispose!)
-  (stop-generating [:crypto :m])
-
-  (def dispose!2
-    (account-in-printer2 prn prn))
-  (dispose!2)
-
+   {:db db-duck}
+   account-in-f
+   [:forex :m])
 ;
   )
+
 
 (defn start-cli [& _]
   (start)
   @(promise))
-
-;; bad ip
-
-(def account-in-f2
-  (get-quote-session fix-engine :account-invalid-ip))
-
-(def account-in-printer2
-  (m/reduce (fn [_ v] (println "demo in:" v)) nil account-in-f2))
-
-(def assets ["EUR/USD" "GBP/USD" "EUR/JPY"
-             "USD/JPY" "AUD/USD" "USD/CHF"
-             "GBP/JPY" "USD/CAD" "EUR/GBP"
-             "EUR/CHF"  "NZD/USD" "USD/NOK"
-             "USD/ZAR" "USD/SEK" "USD/MXN"])
-

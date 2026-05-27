@@ -2,7 +2,7 @@
   (:require
    [missionary.core :as m]
    [fix-translator.session :refer [create-session]]
-   [fix-engine.boot :refer [boot-with-retry]]
+   [fix-engine.impl.boot :refer [boot-with-retry]]
    [fix-engine.logger :refer [log log-time]])
   (:import missionary.Cancelled))
 

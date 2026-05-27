@@ -1,4 +1,4 @@
-(ns fix-engine.boot
+(ns fix-engine.impl.boot
   (:require
    [missionary.core :as m]
    [fix-engine.impl.socket :refer [create-client]]

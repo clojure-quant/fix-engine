@@ -3,7 +3,7 @@
    [missionary.core :as m]
    [nano-id.core :refer [nano-id]]
    [fix-engine.logger :refer [log log-time]]
-   [fix-translator.session :refer [decode-msg fix-msg-vec->payload]]
+   [fix-translator.session :refer [fix-msg-vec->payload ]]
    [fix-translator.ctrader :refer [subscribe-payload
                                    ->quote incoming-quote-id-convert
                                    seclist->assets write-assets create-asset-converter]])
@@ -51,9 +51,12 @@
                            (when log-in-fix
                              (log-time "FIX-IN" (pr-str msg)))
 
-                           (let [fix-type-payload (decode-msg fix-session msg)
+                           (let [fix-type-payload (fix-msg-vec->payload fix-session msg)
                                  [msg-type payload] fix-type-payload]
-                             (when (= msg-type "y")
+                                                         
+                             (println "msg-type: " msg-type)
+
+                             (when (= msg-type :security-list ) ; "y"
                                (log-time "SEC-LIST" "RCVD!")
                                (let [assets (seclist->assets fix-type-payload)
                                      converter (create-asset-converter assets)]
@@ -69,10 +72,10 @@
 
                              (when (= msg-type "3")
                                (log-time "fix-reject" (str payload)))
-                             
+
                              (when (= msg-type "4")
                                (log-time "fix-seq-reset" (str payload)))
-                             
+
                              (when (= msg-type "5")
                                (log-time "fix-logout" (str payload))
                                ; this is received after a weekend.
@@ -80,15 +83,12 @@
                                ; fix-logout: {:text "Session reset"}  
                                (throw (ex-info "session-reset" {:msg "logout message received!"
                                                                 :text (str payload)})))
-                                                          
+
                              (when (= msg-type "j")
                                (log-time "fix-business-reject" (str payload)))
-                             
+
                              (when (= msg-type "Y")
-                               (log-time "fix-market-data-reject" (str payload)))
-                             
-                             
-                             )
+                               (log-time "fix-market-data-reject" (str payload))))
 
                            nil)
                          nil in-flow)
@@ -136,7 +136,7 @@
   (log-time "only-quotes keys:" (keys fix-session))
   (m/eduction
    (remove nil?) ; in the end a nil message is received, dont parse this 
-   (map (partial decode-msg fix-session))
+   (map (partial fix-msg-vec->payload fix-session))
    (map ->quote) ; returns a quote or nil (if message is not a quote)
    (remove nil?)
    (map (partial incoming-quote-id-convert fix-session))
