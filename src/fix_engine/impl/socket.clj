@@ -97,7 +97,7 @@
 
 (defn create-client
   [this]
-  (let [tcp-config (select-keys (:config this) [:host :port])
+  (let [tcp-config (select-keys (:config this) [:host :port :ssl-context])
         _ (log "CONNECTING" tcp-config)
         c (tcp/client tcp-config)
         r (d/chain c #(wrap-duplex-stream %))

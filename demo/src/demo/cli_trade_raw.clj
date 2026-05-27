@@ -1,11 +1,12 @@
-(ns demo.demo1
+(ns demo.cli-trade-raw
   (:require
    [missionary.core :as m]
    [nano-id.core :refer [nano-id]]
-   [fix-translator.ctrader :refer [seclist->assets write-assets]]
+   [tick.core :as t]
    [fix-translator.session :refer [create-session fix-msg-vec->payload]]
    [fix-engine.impl.socket :refer [create-client]]
-   [fix-engine.logger :refer [log]]))
+   [fix-engine.logger :refer [log]]
+   [demo.accounts :as accounts]))
 
 (defn login-payload [{:keys [decoder]}]
   [:logon
@@ -19,37 +20,14 @@
   [:heartbeat
    {:test-request-id  (nano-id 5)}])
 
-(defn subscribe-payload []
-  [:market-data-request
-   {:mdreq-id  (nano-id 5)
-    :subscription-request-type :snapshot-plus-updates,
-    :market-depth 1,
-    :mdupdate-type :incremental-refresh,
-    :no-mdentry-types [{:mdentry-type :bid} {:mdentry-type :offer}],
-    :no-related-sym [{:symbol "4"} ; eurjpy
-                     {:symbol "1"} ; eurusd
-                     ]}])
+(defn position-request []
+  [:request-for-positions
+   {:pos-req-id  (nano-id 5)}])
 
-(defn security-list-request []
-  [:security-list-request
-   {:security-req-id (nano-id 5) ; req id
-    :security-list-request-type :symbol}])
 
 (defn create-decoder []
-  (create-session {:spec "fix-specs/ctrader.edn"
-                   :header {:begin-string "FIX.4.4"
-                            :target-comp-id "CSERVER"
-                            :sender-comp-id "live.fxpro.8284171"
-                            :target-sub-id "QUOTE"
-                            :sender-sub-id "QUOTE"}
-                   :host "live-uk-eqx-01.p.c-trader.com"
-                   :port 5201 ; plain text
-                         ;ssl-port 5211
-                   :username "8284171"
-                   :password "Regenschirm13!"
-                   :log-out-payload false
-                   :log-out-fix false
-                   :log-in-fix true}))
+  (create-session accounts/pepperstone-trade-plain))
+
 
 (defn send-msg [{:keys [decoder send-fix-msg]} fix-type-payload-vec]
   (log "send-data" fix-type-payload-vec)
@@ -59,11 +37,7 @@
   (log "IN-FIX" (pr-str fix-msg))
   (let [msg-type-payload (fix-msg-vec->payload this fix-msg)
         [msg-type payload] msg-type-payload]
-    (when (= msg-type "y")
-      (-> msg-type-payload seclist->assets write-assets))
-    (println "msg-type: " msg-type " payload: " payload)
-    
-    ))
+    (println "msg-type: " msg-type " payload: " payload)))
 
 (defn consume-incoming [{:keys [decoder in-flow] :as this}]
   (let [log-msg (fn [_ v]
@@ -72,6 +46,30 @@
     (log "consumer-start" "")
     (t #(log "consumer-success" %)
        #(log "consumer-crash " %))))
+
+(def order-qty 1000)
+
+(defn new-order-payload
+  [{:keys [symbol side ord-type price]}]
+  (cond-> ["D"
+           {:cl-ord-id (nano-id 8)
+            :symbol symbol
+            :side side
+            :transact-time (t/instant)
+            :order-qty order-qty
+            :ord-type ord-type}]
+    price (update 1 assoc :price price)))
+
+;; 4 different cTrader symbol ids: 1=EURUSD, 2=GBPUSD, 3=EURJPY, 4=USDJPY
+(def demo-orders
+  [{:symbol "1" :side :buy  :ord-type :market}
+   {:symbol "2" :side :sell :ord-type :market}
+   {:symbol "3" :side :buy  :ord-type :limit :price 150.0}
+   {:symbol "4" :side :sell :ord-type :limit :price 160.0}])
+
+(defn send-demo-orders [this]
+  (doseq [order demo-orders]
+    (send-msg this (new-order-payload order))))
 
 (defn start []
   (let [decoder (create-decoder)
@@ -85,8 +83,11 @@
         this (assoc this :consumer-t consumer-t)]
 
     (send-msg this login-msg)
-    (send-msg this (security-list-request))
-    (send-msg this (subscribe-payload))
+    (send-demo-orders this)
+    (Thread/sleep 10000)
+    (send-msg this (position-request))
+
+
     this))
 
 (comment

@@ -1,7 +1,7 @@
 (ns fix-engine.impl.account
   (:require
    [missionary.core :as m]
-   [fix-engine.impl.session :refer [create-session]]
+   [fix-translator.session :refer [create-session]]
    [fix-engine.boot :refer [boot-with-retry]]
    [fix-engine.logger :refer [log log-time]])
   (:import missionary.Cancelled))

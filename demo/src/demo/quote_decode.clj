@@ -5,7 +5,7 @@
    [fix-translator.message :refer [fix->payload
                                    encode-fix-msg]]
    [fix-translator.ctrader :refer [->quote]]
-  [fix-engine.impl.session :refer [encode-msg decode-msg]]
+   [fix-translator.session :refer [encode-msg decode-msg]]
    ))
 
 
