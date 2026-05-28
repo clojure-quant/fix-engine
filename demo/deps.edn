@@ -9,13 +9,14 @@
                        cider/cider-nrepl {:mvn/version "0.28.3"}}
           :main-opts  ["-m" "nrepl.cmdline"]}
 
-  :cli-quote-raw {:exec-fn  demo.cli-quote-raw/start-cli}
-  :cli-quote-raw-ssl {:exec-fn  demo.cli-quote-raw-ssl/start-cli}
-  :cli-trade-raw {:exec-fn  demo.cli-trade-raw/start-cli}
-  :cli-engine-quote-db {:exec-fn  demo.cli-engine-quote-db/start-cli}
-  
-  :print {:exec-fn  demo.print/print-cli}
+  :old/cli-quote-raw {:exec-fn demo.old.cli-quote-raw/start-cli}
+  :old/cli-quote-raw-ssl {:exec-fn demo.old.cli-quote-raw-ssl/start-cli}
+  :old/cli-trade-raw {:exec-fn demo.old.cli-trade-raw/start-cli}
+  :old/cli-engine-quote-db {:exec-fn demo.old.cli-engine-quote-db/start-cli}
+  :old/print {:exec-fn demo.print/print-cli}
+
+  :cli-quote-print {:exec-fn demo.cli-quote-print/start-cli}
+  :cli-trade {:exec-fn demo.cli-trade/start-cli}
 
 ;
   }}
-

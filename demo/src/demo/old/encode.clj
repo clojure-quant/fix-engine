@@ -1,9 +1,9 @@
-(ns demo.encode
+(ns demo.old.encode
   (:require
    [fix-translator.session :refer [load-accounts create-session
                                    encode-msg]]))
 
-(def fix-config "fix-accounts.edn")
+(def fix-config "fix-accounts-old.edn")
 ;(def account :ctrader-tradeviewmarkets-quote)
 (def account :ctrader-tradeviewmarkets2-quote)
 

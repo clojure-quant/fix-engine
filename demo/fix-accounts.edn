@@ -1,78 +1,84 @@
-{:ctrader-tradeviewmarkets-quote
- {:spec "fix-specs/ctrader.edn"
-  :header {:begin-string "FIX.4.4"
-           :target-comp-id "CSERVER"
-           :sender-comp-id "demo.tradeviewmarkets.3193299"
-           :target-sub-id "QUOTE"
-           :sender-sub-id "QUOTE"}
-  :host "demo-uk-eqx-01.p.c-trader.com"
-  :port 5201 ; plain text
-  ;ssl-port 5211
-  :username "3193299"
-  :password "2025Florian"
-  :log-out-payload false
-  :log-out-fix false
-  :log-in-fix true
-  }
- :ctrader-tradeviewmarkets2-quote
- {:spec "fix-specs/ctrader.edn"
-  :header {:begin-string "FIX.4.4"
-           :target-comp-id "cServer"
-           :sender-comp-id "demo.tradeviewmarkets.3193335"
-           :target-sub-id "QUOTE"
-           :sender-sub-id "QUOTE"}
-  :host "demo-uk-eqx-01.p.c-trader.com"
-  :port 5201 ; plain text
-   ;ssl-port 5211
-  :username "3193335"
-  :password "123456789"
-  :log-out-payload false
-  :log-out-fix false
-  :log-in-fix true}
- :account-invalid-ip
- {:spec "fix-specs/ctrader.edn"
-  :header {:begin-string "FIX.4.4"
-           :target-comp-id "cServer"
-           :sender-comp-id "demo.tradeviewmarkets.3193335"
-           :target-sub-id "QUOTE"
-           :sender-sub-id "QUOTE"}
-  :host "bongistan.the-dark-void-789.com"
-  :port 5201 ; plain text
-    ;ssl-port 5211
-  :username "3193335"
-  :password "123456789"
-  :log-out-payload false
-  :log-out-fix false
-  :log-in-fix false}
- ;; ctrader fxpro
- :ctrader-fxpro-quote
- {:spec "fix-specs/ctrader.edn"
-  :header {:begin-string "FIX.4.4"
-           :target-comp-id "CSERVER"
-           :sender-comp-id "live.fxpro.8284171"
-           :target-sub-id "QUOTE"
-           :sender-sub-id "QUOTE"}
-  :host "live-uk-eqx-01.p.c-trader.com"
-  :port 5201 ; plain text
-   ;ssl-port 5211
-  :username "8284171"
-  :password "Regenschirm13!"
-  :log-out-payload false
-  :log-out-fix false
-  :log-in-fix true}
- :ctrader-fxpro-trade
- {:spec "fix-specs/ctrader.edn"
-  :header {:begin-string "FIX.4.4"
-           :target-comp-id "CSERVER"
-           :sender-comp-id "live.fxpro.8284171"
-           :target-sub-id "TRADE"
-           :sender-sub-id "TRADE"}
-  :host "live-uk-eqx-01.p.c-trader.com"
-  :port 5202 ; plain text
-    ;ssl-port 5211
-  :username "8284171"
-  :password "Regenschirm13!"
-  :log-out-payload false
-  :log-out-fix false
-  :log-in-fix true}
- }
+{:ctrader-fxpro-quote {:account/name "fxpro-ctrader-quote"
+                       :account/id 8284171
+                       :spec "fix-specs/ctrader.edn"
+                       :header {:begin-string "FIX.4.4"
+                                :target-comp-id "CSERVER"
+                                :sender-comp-id "live.fxpro.8284171"
+                                :target-sub-id "QUOTE"
+                                :sender-sub-id "QUOTE"}
+                       :tcp {:host "live-uk-eqx-01.p.c-trader.com"
+                             :port 5201
+                             :ssl false}
+                       :login {:username "8284171"
+                               :password "Regenschirm13!"}}
+
+ :ctrader-fxpro-trade {:account/name "fxpro-ctrader-trade"
+                       :account/id 8284171
+                       :spec "fix-specs/ctrader.edn"
+                       :header {:begin-string "FIX.4.4"
+                                :target-comp-id "CSERVER"
+                                :sender-comp-id "live.fxpro.8284171"
+                                :target-sub-id "TRADE"
+                                :sender-sub-id "TRADE"}
+                       :tcp {:host "live-uk-eqx-01.p.c-trader.com"
+                             :port 5202
+                             :ssl false}
+                       :login {:username "8284171"
+                               :password "Regenschirm13!"}}
+ 
+ :ctrader-pepperstone-trade-plain {:account/name "pepperstone-ctrader-trade-plain"
+                                   :account/id 5292473
+                                   :spec "fix-specs/ctrader.edn"
+                                   :header {:begin-string "FIX.4.4"
+                                            :target-comp-id "CSERVER"
+                                            :sender-comp-id "demo.pepperstone.5292473"
+                                            :target-sub-id "TRADE"
+                                            :sender-sub-id "TRADE"}
+                                   :tcp {:host "demo-us-eqx-01.p.c-trader.com"
+                                         :port 5202
+                                         :ssl false}
+                                   :login {:username "5292473"
+                                           :password "Regenschirm13!"}}
+
+ :ctrader-pepperstone-trade-ssl {:account/name "pepperstone-ctrader-trade-ssl"
+                                 :account/id 5292473
+                                 :spec "fix-specs/ctrader.edn"
+                                 :header {:begin-string "FIX.4.4"
+                                          :target-comp-id "CSERVER"
+                                          :sender-comp-id "demo.pepperstone.5292473"
+                                          :target-sub-id "TRADE"
+                                          :sender-sub-id "TRADE"}
+                                 :tcp {:host "demo-us-eqx-01.p.c-trader.com"
+                                       :port 5212
+                                       :ssl true}
+                                 :login {:username "5292473"
+                                         :password "Regenschirm13!"}}
+
+
+ :ctrader-tradeviewmarkets-quote {:account/name "tradeviewmarkets-quote"
+                                  :account/id 3193299
+                                  :spec "fix-specs/ctrader.edn"
+                                  :header {:begin-string "FIX.4.4"
+                                           :target-comp-id "CSERVER"
+                                           :sender-comp-id "demo.tradeviewmarkets.3193299"
+                                           :target-sub-id "QUOTE"
+                                           :sender-sub-id "QUOTE"}
+                                  :tcp {:host "demo-uk-eqx-01.p.c-trader.com"
+                                        :port 5201
+                                        :ssl false}
+                                  :login {:username "3193299"
+                                          :password "2025Florian"}}
+
+ :account-invalid-ip {:account/name "invalid-host-quote"
+                      :account/id 0
+                      :spec "fix-specs/ctrader.edn"
+                      :header {:begin-string "FIX.4.4"
+                               :target-comp-id "cServer"
+                               :sender-comp-id "demo.tradeviewmarkets.3193335"
+                               :target-sub-id "QUOTE"
+                               :sender-sub-id "QUOTE"}
+                      :tcp {:host "bongistan.the-dark-void-789.com"
+                            :port 5201
+                            :ssl false}
+                      :login {:username "3193335"
+                              :password "123456789"}}}

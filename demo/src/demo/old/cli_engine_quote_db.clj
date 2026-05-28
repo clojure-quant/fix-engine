@@ -1,32 +1,30 @@
-(ns demo.cli-engine-quote-db
+(ns demo.old.cli-engine-quote-db
   (:require
+   [clojure.edn :as edn]
    [missionary.core :as m]
-   [fix-engine.core :refer [create-fix-engine configured-accounts
-                            get-quote-session]]
+   [fix-engine.impl-old.account :refer [create-account-session]]
+   [fix-engine.impl-old.quotes :refer [create-quote-interactor only-quotes]]
    [fix-engine.logger :refer [log]]
    [quanta.bar.generator :refer [start-generating]]
    [quanta.bar.db.duck :as duck]))
 
-;; CREATE FIX ENGINE
-
 (def fix-engine
-  (create-fix-engine "fix-accounts.edn"))
+  {:accounts (edn/read-string (slurp "fix-accounts-old.edn"))})
 
-(configured-accounts fix-engine)
+(def account-config
+  (:ctrader-fxpro-quote (:accounts fix-engine)))
 
-fix-engine
-
-;; QUOTES FLOW
+(def quote-session
+  (create-account-session account-config create-quote-interactor))
 
 (def account-in-f
-  (get-quote-session fix-engine  :ctrader-fxpro-quote))
+  (only-quotes (:session quote-session) (:out-f quote-session)))
 
 (def account-in-printer
   (m/reduce (fn [_ v]
               (log "QUOTE IN" v)) nil account-in-f))
 
 (defn start []
-
   (println "starting ctrader quote printer..")
   (def dispose!
     (account-in-printer #(log "demo-task completed" %)
@@ -38,10 +36,7 @@ fix-engine
   (start-generating
    {:db db-duck}
    account-in-f
-   [:forex :m])
-;
-  )
-
+   [:forex :m]))
 
 (defn start-cli [& _]
   (start)

@@ -1,0 +1,78 @@
+{:ctrader-tradeviewmarkets-quote
+ {:spec "fix-specs/ctrader.edn"
+  :header {:begin-string "FIX.4.4"
+           :target-comp-id "CSERVER"
+           :sender-comp-id "demo.tradeviewmarkets.3193299"
+           :target-sub-id "QUOTE"
+           :sender-sub-id "QUOTE"}
+  :host "demo-uk-eqx-01.p.c-trader.com"
+  :port 5201 ; plain text
+  ;ssl-port 5211
+  :username "3193299"
+  :password "2025Florian"
+  :log-out-payload false
+  :log-out-fix false
+  :log-in-fix true
+  }
+ :ctrader-tradeviewmarkets2-quote
+ {:spec "fix-specs/ctrader.edn"
+  :header {:begin-string "FIX.4.4"
+           :target-comp-id "cServer"
+           :sender-comp-id "demo.tradeviewmarkets.3193335"
+           :target-sub-id "QUOTE"
+           :sender-sub-id "QUOTE"}
+  :host "demo-uk-eqx-01.p.c-trader.com"
+  :port 5201 ; plain text
+   ;ssl-port 5211
+  :username "3193335"
+  :password "123456789"
+  :log-out-payload false
+  :log-out-fix false
+  :log-in-fix true}
+ :account-invalid-ip
+ {:spec "fix-specs/ctrader.edn"
+  :header {:begin-string "FIX.4.4"
+           :target-comp-id "cServer"
+           :sender-comp-id "demo.tradeviewmarkets.3193335"
+           :target-sub-id "QUOTE"
+           :sender-sub-id "QUOTE"}
+  :host "bongistan.the-dark-void-789.com"
+  :port 5201 ; plain text
+    ;ssl-port 5211
+  :username "3193335"
+  :password "123456789"
+  :log-out-payload false
+  :log-out-fix false
+  :log-in-fix false}
+ ;; ctrader fxpro
+ :ctrader-fxpro-quote
+ {:spec "fix-specs/ctrader.edn"
+  :header {:begin-string "FIX.4.4"
+           :target-comp-id "CSERVER"
+           :sender-comp-id "live.fxpro.8284171"
+           :target-sub-id "QUOTE"
+           :sender-sub-id "QUOTE"}
+  :host "live-uk-eqx-01.p.c-trader.com"
+  :port 5201 ; plain text
+   ;ssl-port 5211
+  :username "8284171"
+  :password "Regenschirm13!"
+  :log-out-payload false
+  :log-out-fix false
+  :log-in-fix true}
+ :ctrader-fxpro-trade
+ {:spec "fix-specs/ctrader.edn"
+  :header {:begin-string "FIX.4.4"
+           :target-comp-id "CSERVER"
+           :sender-comp-id "live.fxpro.8284171"
+           :target-sub-id "TRADE"
+           :sender-sub-id "TRADE"}
+  :host "live-uk-eqx-01.p.c-trader.com"
+  :port 5202 ; plain text
+    ;ssl-port 5211
+  :username "8284171"
+  :password "Regenschirm13!"
+  :log-out-payload false
+  :log-out-fix false
+  :log-in-fix true}
+ }

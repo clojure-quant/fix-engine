@@ -1,7 +1,7 @@
 (ns demo.trade1
   (:require
    [missionary.core :as m]
-   [fix-engine.impl.trade :refer [create-fix-broker-trade]]
+   [fix-engine.impl-old.trade :refer [create-fix-broker-trade]]
 
    [fix-engine.logger :refer [create-logger start-logging-flow]]))
 (def log (create-logger "test-trade.log"))

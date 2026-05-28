@@ -1,9 +1,9 @@
-(ns fix-engine.impl.trade
+(ns fix-engine.impl-old.trade
   (:require
    [missionary.core :as m]
    [nano-id.core :refer [nano-id]]
    [fix-engine.logger :refer [log log-time]]
-   [fix-engine.impl.account :refer [create-account-session]]
+   [fix-engine.impl-old.account :refer [create-account-session]]
    [fix-translator.session :refer [fix-msg-vec->payload]]
    [fix-translator.ctrader :refer [subscribe-payload
                                    ->quote incoming-quote-id-convert

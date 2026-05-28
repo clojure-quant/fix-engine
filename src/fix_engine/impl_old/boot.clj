@@ -1,7 +1,7 @@
-(ns fix-engine.impl.boot
+(ns fix-engine.impl-old.boot
   (:require
    [missionary.core :as m]
-   [fix-engine.impl.socket :refer [create-client]]
+   [fix-engine.impl-old.socket :refer [create-client]]
    [fix-engine.logger :refer [log log-time]])
   (:import missionary.Cancelled))
 
