@@ -1,6 +1,7 @@
 (ns fix-engine.impl.tcp.boot
   (:require
    [missionary.core :as m]
+   [fix-engine.account :as account]
    [fix-engine.impl.tcp.socket :as socket]
    [fix-engine.impl.fix-session :as fix-session])
   (:import missionary.Cancelled))
@@ -22,14 +23,14 @@
 (def ^:private fib (map first (iterate fib-iter [1 1])))
 (def ^:private retry-delays (map (partial * 100) (next fib)))
 
-(defn- connect-and-run [fix-account-config log interactor]
+(defn- connect-and-run [account log interactor]
   (m/sp
-   (dbg "connect-and-run: begin" (select-keys (:tcp fix-account-config) [:host :port :ssl]))
+   (dbg "connect-and-run: begin" (select-keys (:tcp (account/settings account)) [:host :port :ssl]))
    (try
      (dbg "connect-and-run: tcp connect ...")
-     (let [tcp-socket (m/? (socket/connect fix-account-config))
+     (let [tcp-socket (m/? (socket/connect account))
            _ (dbg "connect-and-run: tcp connected, creating session")
-           {:keys [run connection-id]} (fix-session/create-fix-session-task fix-account-config tcp-socket log interactor)]
+           {:keys [run connection-id]} (fix-session/create-fix-session-task account tcp-socket log interactor)]
        (dbg "connect-and-run: session connection-id=" connection-id "running ...")
        (m/? run)
        (dbg "connect-and-run: session run finished")
@@ -44,13 +45,14 @@
 
 (defn boot-with-retry
   "Connects with fibonacci backoff and runs fix-session until disconnect or failure.
+   `account` is a map with `:account/api` `:fix` and `:account/settings`.
    `log` is a function of one event map (created by the caller with flow-sender)."
-  [fix-account-config log interactor]
+  [account log interactor]
   (m/sp
    (dbg "boot-with-retry: started")
    (loop [delays retry-delays n 1]
      (dbg "boot-with-retry: attempt" n)
-     (if-some [exit (m/? (connect-and-run fix-account-config log interactor))]
+     (if-some [exit (m/? (connect-and-run account log interactor))]
        (let [next-delays (case exit
                            :host-unknown nil
                            :connect-ex delays

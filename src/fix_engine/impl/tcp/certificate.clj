@@ -1,4 +1,4 @@
-(ns fix-engine.impl.certificate
+(ns fix-engine.impl.tcp.certificate
   (:require
    [clojure.string :as str]
    [clojure.java.io :as io]

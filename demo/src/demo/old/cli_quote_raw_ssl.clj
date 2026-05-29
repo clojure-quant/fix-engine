@@ -4,7 +4,7 @@
    [nano-id.core :refer [nano-id]]
    [fix-translator.ctrader :refer [seclist->assets write-assets]]
    [fix-translator.session :refer [create-session fix-msg-vec->payload]]
-   [fix-engine.impl.certificate :refer [create-certificate-manager]]
+   [fix-engine.impl.tcp.certificate :refer [create-certificate-manager]]
    [fix-engine.impl-old.socket :refer [create-client]]
    [fix-engine.logger :refer [log]]
    [demo.accounts :as accounts]

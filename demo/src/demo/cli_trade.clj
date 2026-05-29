@@ -1,15 +1,17 @@
 (ns demo.cli-trade
   (:require
-   [clojure.edn :as edn]
    [missionary.core :as m]
+   [fix-engine.account :as account]
    [tick.core :as t]
    [fix-engine.impl.log-flow :refer [flow-sender]]
    [fix-engine.impl.tcp.boot :refer [boot-with-retry]]
    [fix-engine.impl.interactor.trade :refer [create-trade-interactor]]
    [fix-engine.logger :refer [log]]))
 
-(defn- load-account [kw]
-  (get (edn/read-string (slurp "fix-accounts.edn")) kw))
+(defn- load-account [account-ref]
+  (account/find-account
+   (account/load-accounts-file "fix-accounts.edn")
+   (account/as-account-name account-ref)))
 
 (defn- account-log-fn [account-config send subscriber-ready?]
   (fn [event]
@@ -59,10 +61,11 @@
      (recur))))
 
 (defn start
-  [account-kw]
-  (let [account-config (load-account account-kw)
+  [account-ref]
+  (let [account-name (account/as-account-name account-ref)
+        account-config (load-account account-ref)
         _ (when-not account-config
-            (throw (ex-info "missing account in fix-accounts.edn" {:account account-kw})))
+            (throw (ex-info "missing account in fix-accounts.edn" {:account/name account-name})))
         {:keys [flow send]} (flow-sender)
         subscriber-ready? (atom false)
         log-fn (account-log-fn account-config send subscriber-ready?)
@@ -92,7 +95,7 @@
      :dispose-sender dispose-sender}))
 
 (defn start-cli
-  "Usage: clojure -X:cli-trade :account :ctrader-pepperstone-trade-ssl"
-  [{:keys [account] :or {account :ctrader-fxpro-trade}}]
+  "Usage: clojure -X:cli-trade :account :pepperstone-ctrader-trade-ssl"
+  [{:keys [account] :or {account :fxpro-ctrader-trade}}]
   (start account)
   @(promise))

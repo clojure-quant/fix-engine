@@ -7,7 +7,8 @@
    [gloss.io :as io]
    [fix-translator.gloss :refer [fix-protocol]]
    [fix-translator.message-wire :refer [vec->wire]]
-   [fix-engine.impl.certificate :refer [create-certificate-manager]])
+   [fix-engine.account :as account]
+   [fix-engine.impl.tcp.certificate :refer [create-certificate-manager]])
   (:import missionary.Cancelled))
 
 (defn- dbg [& args]
@@ -57,11 +58,11 @@
        nil))))
 
 (defn connect
-  "Connects using :tcp from fix-account-config.
+  "Connects using `:tcp` from `:account/settings`.
    Returns a missionary task producing {:push fn :pull fn} for FIX wire strings."
-  [fix-account-config]
+  [account]
   (m/sp
-   (let [{:keys [host port ssl]} (:tcp fix-account-config)
+   (let [{:keys [host port ssl]} (:tcp (account/settings account))
          tcp-config (cond-> {:host host :port port}
                       ssl (merge (create-certificate-manager)))
          _ (dbg "connect" tcp-config)

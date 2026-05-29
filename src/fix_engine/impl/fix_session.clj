@@ -2,6 +2,7 @@
   (:require
    [missionary.core :as m]
    [nano-id.core :refer [nano-id]]
+   [fix-engine.account :as account]
    [fix-translator.session :refer [create-session payload->fix-msg-vec fix-msg-vec->payload]]
    [fix-translator.message-wire :refer [vec->wire wire->vec]]
    [fix-translator.ctrader :refer [seclist->assets create-asset-converter]])
@@ -11,8 +12,8 @@
   (apply println "[fix-session]" args)
   (flush))
 
-(defn login-payload [fix-account-config]
-  (let [{:keys [username password]} (:login fix-account-config)]
+(defn login-payload [account]
+  (let [{:keys [username password]} (:login (account/settings account))]
     [:logon {:encrypt-method :none-other
              :heart-bt-int 60
              :reset-seq-num-flag "Y"
@@ -61,9 +62,9 @@
        (in-mbx nil)))))
 
 (defn create-fix-session-task
-  [fix-account-config tcp-socket log interactor]
+  [account tcp-socket log interactor]
   (let [connection-id (nano-id 16)
-        session (create-session fix-account-config)
+        session (create-session (account/settings account))
         log* (fn [event]
                (log (assoc event :connection-id connection-id)))
         tcp-push (:push tcp-socket)
@@ -89,7 +90,7 @@
                                    (dbg "session: connecting")
                                    (log* {:type :connection-status :data :connecting})
                                    (dbg "session: sending logon")
-                                   (m/? (push (login-payload fix-account-config)))
+                                   (m/? (push (login-payload account)))
                                    (loop [n 0]
                                      (let [[msg-type _] (m/? (pull))]
                                        (dbg "session: waiting for logon, got" msg-type "n=" n)
@@ -116,7 +117,7 @@
                                      (dbg "session: ready, starting interactor")
                                      (log* {:type :connection-status :data :ready})
                                      (m/? (m/join vector
-                                                  (interactor fix-account-config connection-id push pull log* asset-converter)
+                                                  (interactor account connection-id push pull log* asset-converter)
                                                   (heartbeat-sender push)
                                                   (timeout-watchdog keepalive 90000))))))]
                (try

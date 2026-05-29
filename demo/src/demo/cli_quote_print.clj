@@ -1,7 +1,7 @@
 (ns demo.cli-quote-print
   (:require
-   [clojure.edn :as edn]
    [missionary.core :as m]
+   [fix-engine.account :as account]
    [fix-engine.impl.log-flow :refer [flow-sender]]
    [fix-engine.impl.tcp.boot :refer [boot-with-retry]]
    [fix-engine.impl.interactor.quote :refer [create-quote-interactor]]
@@ -11,10 +11,9 @@
   (apply println "[cli-quote-print]" args)
   (flush))
 
-(defn- load-account [kw]
-  (dbg "loading account" kw "cwd=" (System/getProperty "user.dir"))
-  (let [accounts (edn/read-string (slurp "fix-accounts.edn"))
-        cfg (get accounts kw)]
+(defn- load-account [account-name]
+  (dbg "loading account" account-name "cwd=" (System/getProperty "user.dir"))
+  (let [cfg (account/find-account (account/load-accounts-file "fix-accounts.edn") account-name)]
     (dbg "account loaded?" (boolean cfg))
     cfg))
 
@@ -53,9 +52,9 @@
 
 (defn start []
   (dbg "start()")
-  (let [account-config (load-account :ctrader-fxpro-quote)
+  (let [account-config (load-account "fxpro-ctrader-quote")
         _ (when-not account-config
-            (throw (ex-info "missing account :ctrader-fxpro-quote in fix-accounts.edn" {})))
+            (throw (ex-info "missing account fxpro-ctrader-quote in fix-accounts.edn" {})))
         {:keys [flow send]} (flow-sender)
         subscriber-ready? (atom false)
         log-fn (account-log-fn account-config send subscriber-ready?)

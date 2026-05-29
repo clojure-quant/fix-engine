@@ -11,5 +11,5 @@ From [fixprotocol.org](http://www.fixprotocol.org/what-is-fix.shtml)
 cd demo
 clj -X:cli-quote-print 
 
-clojure -X:cli-trade :account :ctrader-pepperstone-trade-ssl
+clojure -X:cli-trade :account :pepperstone-ctrader-trade-ssl
 
