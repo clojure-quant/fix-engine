@@ -2,8 +2,11 @@
   (:require
    [missionary.core :as m]
    [nano-id.core :refer [nano-id]]
+   [tick.core :as t]
    [fix-engine.account :as account]
-   [fix-translator.session :refer [create-session payload->fix-msg-vec fix-msg-vec->payload]]
+   [fix-translator.schema :refer [get-msg-type]]
+   [fix-translator.message :refer [encode-message]]
+   [fix-translator.session :refer [create-session fix-msg-vec->payload]]
    [fix-translator.message-wire :refer [vec->wire wire->vec]]
    [fix-translator.ctrader :refer [seclist->assets create-asset-converter]])
   (:import missionary.Cancelled))
@@ -25,6 +28,24 @@
                            :security-list-request-type :symbol}])
 
 (def heartbeat-payload [:heartbeat {}])
+
+(defn- header-msg-type
+  "App message keywords (e.g. :new-order-single) are not encoded on the FIX
+  header by fix-translator; resolve the wire value from the message spec."
+  [session msg-type]
+  (or (:msgtype (get-msg-type (:decoder session) msg-type))
+      msg-type))
+
+(defn- payload->fix-msg-vec
+  [session [msg-type payload]]
+  (let [{:keys [decoder config outbound-seq-num]} session
+        seq-num (swap! outbound-seq-num inc)
+        header (assoc (:header config)
+                      :msg-type (header-msg-type session msg-type)
+                      :msg-seq-num seq-num
+                      :sending-time (t/instant))
+        fix-message {:header header :payload payload}]
+    (encode-message decoder fix-message)))
 
 (defn- timeout-watchdog
   [mailbox ms]
@@ -54,7 +75,8 @@
          (let [fix-vec (wire->vec fix-str)]
            (log {:type :fix-vec :direction :in :data fix-vec})
            (let [payload (fix-msg-vec->payload session fix-vec)]
-             (log {:type :fix-payload :direction :in :data (second payload)})
+             (log {:type :fix-payload :direction :in :data (second payload)
+                   :fix-msg-type (first payload)})
              (keepalive nil)
              (in-mbx payload)
              (recur)))))
@@ -73,7 +95,7 @@
         push (fn [fix-payload]
                (m/sp
                 (let [[msg-type payload] fix-payload
-                      _ (log* {:type :fix-payload :direction :out :data payload})
+                      _ (log* {:type :fix-payload :direction :out :data payload :fix-msg-type msg-type})
                       fix-vec (payload->fix-msg-vec session fix-payload)
                       _ (log* {:type :fix-vec :direction :out :data fix-vec})
                       fix-str (vec->wire fix-vec)]

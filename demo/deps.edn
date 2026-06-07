@@ -1,7 +1,8 @@
 {:paths ["src"]
  :deps {org.clojure/clojure    {:mvn/version "1.11.1"}
-        io.github.clojure-quant/fix-engine {:local/root ".." :deps/manifest :deps}
-        io.github.clojure-quant/quanta-bar-warehouse {:mvn/version "0.5.43"}}
+        io.github.clojure-quant/quanta-blotter {:mvn/version "0.1.38"}
+        io.github.clojure-quant/quanta-bar-warehouse {:mvn/version "0.5.43"}
+        io.github.clojure-quant/fix-engine {:local/root "../fix-engine" :deps/manifest :deps}}
  :aliases
  {
 
@@ -17,6 +18,5 @@
 
   :cli-quote-print {:exec-fn demo.cli-quote-print/start-cli}
   :cli-trade {:exec-fn demo.cli-trade/start-cli}
-
-;
-  }}
+  :cli-trade-blotter {:exec-fn demo.cli-trade-blotter/start-cli}
+  :blotter-trade {:exec-fn demo.cli-trade-blotter/start-cli}}}
