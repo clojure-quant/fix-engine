@@ -17,7 +17,7 @@
 (defn subscription-changer [subscription-a]
   (m/sp
    (m/? (m/sleep 7000))
-   (println "removingJPY subscriptions")
+   (println "removing JPY subscriptions")
    (swap! subscription-a disj "EURJPY" "USDJPY")
 
    (m/? (m/sleep 7000))

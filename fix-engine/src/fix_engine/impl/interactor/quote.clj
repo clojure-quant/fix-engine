@@ -7,11 +7,6 @@
    [fix-translator.ctrader :refer [get-asset-id get-asset-name]])
   (:import missionary.Cancelled))
 
-
-(defn- dbg [& args]
-  (apply println "[interactor.quote]" args)
-  (flush))
-
 (defn- eventually-add-last-volume [{:keys [bid ask] :as quote}]
   (if (and bid ask)
     (assoc quote :price (/ (+ bid ask) 2.0M)
@@ -58,20 +53,19 @@
          assets-new (m/?> 1 subscription-f)
          _  (session-log {:type :subscriptions :assets assets-new})
          {:keys [sub unsub]} (sub-unsub-sets @assets-old assets-new)]
-       (reset! assets-old assets-new)
+     (reset! assets-old assets-new)
        ; subscribe
-       (when (seq sub)
-         (let [asset-ids (mapv #(get-asset-id asset-converter %) sub)
-               msg (subscribe-payload asset-ids)]
-           (session-log {:type :subscribe :assets sub :broker-assets asset-ids})
-           (m/? (push msg))))
+     (when (seq sub)
+       (let [asset-ids (mapv #(get-asset-id asset-converter %) sub)
+             msg (subscribe-payload asset-ids)]
+         (session-log {:type :subscribe :assets sub :broker-assets asset-ids})
+         (m/? (push msg))))
        ; unsubscribe
-       (when (seq unsub)
-         (let [asset-ids (mapv #(get-asset-id asset-converter %) unsub)
-               msg (unsubscribe-payload asset-ids)]
-           (session-log {:type :unsubscribe :assets unsub :broker-assets asset-ids})
-           (m/? (push msg))))
-       )))
+     (when (seq unsub)
+       (let [asset-ids (mapv #(get-asset-id asset-converter %) unsub)
+             msg (unsubscribe-payload asset-ids)]
+         (session-log {:type :unsubscribe :assets unsub :broker-assets asset-ids})
+         (m/? (push msg)))))))
 
 
 (defn- subscription-watcher
@@ -89,13 +83,27 @@
      (loop []
        (when-let [fix-payload (m/? (pull))]
          (let [[msg-type payload] fix-payload]
-           (when (= msg-type :logout)
+           (case msg-type
+
+             :market-data-snapshot-full-refresh ; full refresh for top-of-book
+             (when-let [q (payload->quote fix-payload)]
+               (let [normalized (normalize-quote asset-converter q)]
+                 (send-quote normalized)))
+
+             :market-data-incremental-refresh ; incremental refresh for orderbook
+             (when-let [q (payload->quote fix-payload)]
+               (println "incremental refresh: " q)
+               (let [normalized (normalize-quote asset-converter q)]
+                 (send-quote normalized)))
+
+             :market-data-request-reject
+             (session-log {:type :subscription-failure :direction :in :data payload})
+
+             :logout
              (throw (ex-info "session-reset" {:msg "logout message received" :text (str payload)})))
-           (when (= msg-type :market-data-request-reject)
-             (session-log {:type :subscription-failure :direction :in :data payload}))
-           (when-let [q (payload->quote fix-payload)]
-             (let [normalized (normalize-quote asset-converter q)]
-               (send-quote normalized))))
+
+           ;else
+           nil)
          (recur)))
      (catch Cancelled _
        true))))
@@ -106,7 +114,7 @@
   [subscription-a send-quote]
   (fn [_fix-account-config _connection-id push pull session-log asset-converter]
     (m/sp
-     (dbg "interactor started")
+     (session-log {:type :interactor-start})
      (m/? (m/join vector
                   (subscription-watcher subscription-a asset-converter push session-log)
                   (message-loop pull session-log asset-converter send-quote))))))

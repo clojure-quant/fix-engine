@@ -3,7 +3,7 @@
    [missionary.core :as m]
    [nano-id.core :refer [nano-id]]
    [tick.core :as t]
-   [fix-engine.account :as account]
+   ;[fix-engine.account :as account]
    [fix-translator.schema :refer [get-msg-type]]
    [fix-translator.message :refer [encode-message]]
    [fix-translator.session :refer [create-session fix-msg-vec->payload]]
@@ -16,7 +16,7 @@
   (flush))
 
 (defn login-payload [account]
-  (let [{:keys [username password]} (:login (account/settings account))]
+  (let [{:keys [username password]} (:login (:account/settings account))]
     [:logon {:encrypt-method :none-other
              :heart-bt-int 60
              :reset-seq-num-flag "Y"
@@ -86,7 +86,7 @@
 (defn create-fix-session-task
   [account tcp-socket log interactor]
   (let [connection-id (nano-id 16)
-        session (create-session (account/settings account))
+        session (create-session (:account/settings account))
         log* (fn [event]
                (log (assoc event :connection-id connection-id)))
         tcp-push (:push tcp-socket)

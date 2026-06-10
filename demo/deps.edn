@@ -7,6 +7,4 @@
           :main-opts  ["-m" "nrepl.cmdline"]}
   
   :quote-print {:exec-fn demo.cli-quote-print/start-cli}
-  
-  :cli-trade {:exec-fn demo.cli-trade/start-cli}
   :blotter-trade {:exec-fn demo.cli-trade-blotter/start-cli}}}
