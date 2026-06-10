@@ -1,0 +1,46 @@
+[;; fxpro
+ {:account/name "fxpro-ctrader-quote"
+  :account/id 1
+  :account/api :fix-quote
+  :account/settings {:spec "fix-specs/ctrader.edn"
+                     :header {:begin-string "FIX.4.4"
+                              :target-comp-id "CSERVER"
+                              :sender-comp-id "live.fxpro.8284171"
+                              :target-sub-id "QUOTE"
+                              :sender-sub-id "QUOTE"}
+                     :tcp {:host "live-uk-eqx-01.p.c-trader.com"
+                           :port 5201
+                           :ssl false}
+                     :login {:username "8284171"
+                             :password "Regenschirm13!"}}}
+  
+ ;; tradeviewmarkets
+ {:account/name "tradeviewmarkets-quote"
+  :account/id 2
+  :account/api :fix-quote
+  :account/settings {:spec "fix-specs/ctrader.edn"
+                     :header {:begin-string "FIX.4.4"
+                              :target-comp-id "CSERVER"
+                              :sender-comp-id "demo.tradeviewmarkets.3193299"
+                              :target-sub-id "QUOTE"
+                              :sender-sub-id "QUOTE"}
+                     :tcp {:host "demo-uk-eqx-01.p.c-trader.com"
+                           :port 5201
+                           :ssl false}
+                     :login {:username "3193299"
+                             :password "2025Florian"}}}
+ ; INVALID HOST
+ #_{:account/name "invalid-host-quote"
+  :account/id 3
+  :account/api :fix-quote
+  :account/settings {:spec "fix-specs/ctrader.edn"
+                     :header {:begin-string "FIX.4.4"
+                              :target-comp-id "cServer"
+                              :sender-comp-id "demo.tradeviewmarkets.3193335"
+                              :target-sub-id "QUOTE"
+                              :sender-sub-id "QUOTE"}
+                     :tcp {:host "bongistan.the-dark-void-789.com"
+                           :port 5201
+                           :ssl false}
+                     :login {:username "3193335"
+                             :password "123456789"}}}]

@@ -25,22 +25,25 @@
 
 (defn- connect-and-run [account log interactor]
   (m/sp
-   (dbg "connect-and-run: begin" (select-keys (:tcp (account/settings account)) [:host :port :ssl]))
    (try
-     (dbg "connect-and-run: tcp connect ...")
+     (log  (-> (select-keys (:tcp (account/settings account)) [:host :port :ssl])
+               (assoc :account/id (:account/id account)
+                      :type :tcp/connect)))
      (let [tcp-socket (m/? (socket/connect account))
-           _ (dbg "connect-and-run: tcp connected, creating session")
+           _ (log {:type :tcp/connected :account/id (:account/id account)})
            {:keys [run connection-id]} (fix-session/create-fix-session-task account tcp-socket log interactor)]
-       (dbg "connect-and-run: session connection-id=" connection-id "running ...")
+       (log {:type :fix-session/starting :account/id (:account/id account)})
        (m/? run)
-       (dbg "connect-and-run: session run finished")
+       (log {:type :fix-session/stopped :account/id (:account/id account)})
        :run-finally)
      (catch java.net.UnknownHostException e
-       (dbg "connect-and-run: UnknownHostException" (.getMessage e))
+       ;(dbg "connect-and-run: UnknownHostException" (.getMessage e))
+       (log {:type :tcp/connect-ex :account/id (:account/id account) :message "Unknown Host"})
        :host-unknown)
      (catch Exception e
        (dbg "connect-and-run: Exception" (ex-message e))
        (.printStackTrace e)
+       (log {:type :fix-session-run-ex :account/id (:account/id account)})
        :connect-ex))))
 
 (defn boot-with-retry

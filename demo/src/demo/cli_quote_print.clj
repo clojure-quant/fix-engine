@@ -1,91 +1,67 @@
 (ns demo.cli-quote-print
   (:require
    [missionary.core :as m]
-   [fix-engine.account :as account]
-   [fix-engine.impl.log-flow :refer [flow-sender]]
-   [fix-engine.impl.tcp.boot :refer [boot-with-retry]]
-   [fix-engine.impl.interactor.quote :refer [create-quote-interactor]]
-   [fix-engine.logger :refer [log]]))
+   [quanta.quote.account-manager :refer [create-account-manager add-edn-accounts get-account]]
+   [quanta.blotter.logger :refer [create-logger log start-log-flow-to-logger]]
+   [fix-engine.quote.fix-quote] ; side-effects
+   ))
 
-(defn- dbg [& args]
-  (apply println "[cli-quote-print]" args)
-  (flush))
-
-(defn- load-account [account-name]
-  (dbg "loading account" account-name "cwd=" (System/getProperty "user.dir"))
-  (let [cfg (account/find-account (account/load-accounts-file "fix-accounts.edn") account-name)]
-    (dbg "account loaded?" (boolean cfg))
-    cfg))
-
-(defn- account-log-fn [account-config send subscriber-ready?]
-  (fn [event]
-    (let [e (merge {:account/id (:account/id account-config)
-                    :account/name (:account/name account-config)}
-                   event)]
-      (if @subscriber-ready?
-        (do (dbg "log-fn send" (:type event) (:direction event))
-            (send e))
-        (dbg "log-fn DROPPED (no subscriber yet):" (:type event))))))
-
-(defn- log-event-printer
-  "Consumes the log flow (single consumer via m/reduce)."
-  [log-f]
+(defn quote-printer [f]
   (m/reduce
-   (fn [_ event]
-     (dbg "log-event:" (:type event) (:direction event)
-          (when (#{:fix-str} (:type event))
-            (subs (str (:data event)) 0 (min 80 (count (str (:data event)))))))
-     (log "EVENT" event)
+   (fn [s v]
+     (println "QUOTE" v)
      nil)
    nil
-   log-f))
+   f))
 
-(defn quote-consumer
-  "Continuously takes quotes from quote-rdv (single m/sp loop; one take per quote)."
-  [quote-rdv]
+(defn subscription-changer [subscription-a]
   (m/sp
-   (loop []
-     (let [q (m/? quote-rdv)]
-       (dbg "quote-rdv take:" q)
-       (log "QUOTE" q)
-       (recur)))))
+   (m/? (m/sleep 7000))
+   (println "removingJPY subscriptions")
+   (swap! subscription-a disj "EURJPY" "USDJPY")
 
-(defn start []
-  (dbg "start()")
-  (let [account-config (load-account "fxpro-ctrader-quote")
-        _ (when-not account-config
-            (throw (ex-info "missing account fxpro-ctrader-quote in fix-accounts.edn" {})))
-        {:keys [flow send]} (flow-sender)
-        subscriber-ready? (atom false)
-        log-fn (account-log-fn account-config send subscriber-ready?)
-        subscription-a (atom #{"EURUSD" "USDJPY"})
-        quote-rdv (m/rdv)
-        interactor (create-quote-interactor subscription-a quote-rdv)
-        _ (dbg "starting quote consumer (rdv taker, before boot)")
-        quote-consumer-t (quote-consumer quote-rdv)
-        dispose-quote (quote-consumer-t #(dbg "quote-consumer done" %)
-                                        #(dbg "quote-consumer CRASH" %))
-        _ (dbg "starting log consumer (m/reduce on flow)")
-        log-consumer (log-event-printer flow)
-        dispose-log (do
-                      (reset! subscriber-ready? true)
-                      (dbg "flow subscriber active")
-                      (log-consumer #(dbg "log-consumer done" %)
-                                    #(dbg "log-consumer CRASH" %)))
-        boot-t (boot-with-retry account-config log-fn interactor)
-        _ (dbg "starting boot")
-        dispose-boot (boot-t #(dbg "boot completed" %)
-                             #(dbg "boot CRASH" %))]
-    (dbg "start() done")
-    {:log-f flow
-     :quote-rdv quote-rdv
-     :dispose-boot dispose-boot
-     :dispose-log dispose-log
-     :dispose-printer dispose-quote
-     :subscription-a subscription-a}))
+   (m/? (m/sleep 7000))
+   (println "adding NOK subscription")
+   (swap! subscription-a conj "EURNOK")
 
-(defn start-cli [& _]
-  (dbg "start-cli()")
-  (start)
-  (dbg "blocking (Ctrl-C to exit)")
+   (m/? (m/sleep 7000))
+   (println "only AUDUSD subscription")
+   (reset! subscription-a #{"AUDUSD"})
+
+   (m/? (m/sleep 7000))
+   (println "subscription-changer done!")
+   
+   nil))
+
+
+(defn start!
+  "Mixed paper + FIX trade accounts via quanta-blotter account manager."
+  []
+  (let [l (create-logger "log/quotes.txt" false)
+        log-fn (partial log l)
+
+        am (create-account-manager log-fn)
+        _ (add-edn-accounts am "fix-accounts-quote.edn")
+
+        {:keys [flow subscription-a]} (get-account am 1)
+        _ (reset! subscription-a #{"EURUSD" "USDJPY" "GBPUSD" "EURJPY"})
+
+        printer (quote-printer flow)
+        dispose-printer (printer #(println "quote-printer done" %)
+                                 #(println "quote-printer CRASH" %))
+
+        sub-changer (subscription-changer subscription-a)
+        dispose-sub-changer (sub-changer #(println "sub-changer done: " %)
+                                         #(println "sub-changer CRASH: " %))]
+    {:dispose-printer dispose-printer
+     :dispose-sub-changer dispose-sub-changer}))
+
+(defn start-cli
+  "Usage: cd demo && clojure -X:blotter-trade"
+  [_]
+  (start!)
   @(promise))
+
+(comment
+  (def ta (start!))
+  (:dispose-account ta))

@@ -3,8 +3,10 @@
    [clojure.set :refer [rename-keys]]
    [missionary.core :as m]
    [nano-id.core :refer [nano-id]]
+   [quanta.quote.subscription :refer [sub-unsub-sets]]
    [fix-translator.ctrader :refer [get-asset-id get-asset-name]])
   (:import missionary.Cancelled))
+
 
 (defn- dbg [& args]
   (apply println "[interactor.quote]" args)
@@ -40,29 +42,48 @@
     :no-mdentry-types [{:mdentry-type :bid} {:mdentry-type :offer}]
     :no-related-sym (mapv (fn [asset-id] {:symbol asset-id}) asset-ids)}])
 
+(defn- unsubscribe-payload [asset-ids]
+  [:market-data-request
+   {:mdreq-id (nano-id 5)
+    :subscription-request-type :disable-previous-snapshot-plus-update-request
+    :market-depth 1
+    :mdupdate-type :incremental-refresh
+    :no-mdentry-types [{:mdentry-type :bid} {:mdentry-type :offer}]
+    :no-related-sym (mapv (fn [asset-id] {:symbol asset-id}) asset-ids)}])
+
+
+(defn process-subscription-changes [subscription-f asset-converter push session-log]
+  (m/ap
+   (let [assets-old (atom #{})
+         assets-new (m/?> 1 subscription-f)
+         _  (session-log {:type :subscriptions :assets assets-new})
+         {:keys [sub unsub]} (sub-unsub-sets @assets-old assets-new)]
+       (reset! assets-old assets-new)
+       ; subscribe
+       (when (seq sub)
+         (let [asset-ids (mapv #(get-asset-id asset-converter %) sub)
+               msg (subscribe-payload asset-ids)]
+           (session-log {:type :subscribe :assets sub :broker-assets asset-ids})
+           (m/? (push msg))))
+       ; unsubscribe
+       (when (seq unsub)
+         (let [asset-ids (mapv #(get-asset-id asset-converter %) unsub)
+               msg (unsubscribe-payload asset-ids)]
+           (session-log {:type :unsubscribe :assets unsub :broker-assets asset-ids})
+           (m/? (push msg))))
+       )))
+
+
 (defn- subscription-watcher
   [subscription-a asset-converter push session-log]
-  (m/sp
-   (m/? (m/reduce
-         (fn [_ symbols]
-           (when (seq symbols)
-             (let [asset-ids (mapv #(get-asset-id asset-converter %) symbols)
-                   msg (subscribe-payload asset-ids)]
-               (dbg "subscription-watcher: subscribe" symbols "->" asset-ids)
-               (try
-                 (m/? (push msg))
-                 (dbg "subscription-watcher: subscribe ok")
-                 (catch Exception ex
-                   (dbg "subscription-watcher: subscribe failed" (ex-message ex))
-             (session-log {:type :subscription-failure
-                            :direction :out
-                            :data {:symbols symbols :error (ex-message ex)}})))))
-           nil)
-         nil
-         (m/ap (m/?> ##Inf (m/watch subscription-a)))))))
+  (let [sub-f (m/watch subscription-a)
+        sub-f (m/relieve sub-f)
+        sub-process-f (process-subscription-changes sub-f asset-converter push session-log)]
+    (m/reduce (fn [_ _] nil) nil sub-process-f)))
+
 
 (defn- message-loop
-  [pull session-log asset-converter quote-rdv]
+  [pull session-log asset-converter send-quote]
   (m/sp
    (try
      (loop []
@@ -74,8 +95,7 @@
              (session-log {:type :subscription-failure :direction :in :data payload}))
            (when-let [q (payload->quote fix-payload)]
              (let [normalized (normalize-quote asset-converter q)]
-               (dbg "quote-rdv give" (:asset normalized))
-               (m/? (quote-rdv normalized)))))
+               (send-quote normalized))))
          (recur)))
      (catch Cancelled _
        true))))
@@ -83,10 +103,10 @@
 (defn create-quote-interactor
   "quote-rdv: missionary rendezvous from (m/rdv); consumer takes with (m/? quote-rdv),
    producer gives with (m/? (quote-rdv value))."
-  [subscription-a quote-rdv]
+  [subscription-a send-quote]
   (fn [_fix-account-config _connection-id push pull session-log asset-converter]
     (m/sp
      (dbg "interactor started")
      (m/? (m/join vector
                   (subscription-watcher subscription-a asset-converter push session-log)
-                  (message-loop pull session-log asset-converter quote-rdv))))))
+                  (message-loop pull session-log asset-converter send-quote))))))
