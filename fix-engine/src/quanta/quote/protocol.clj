@@ -12,3 +12,15 @@
    "
   (fn [account-config subscription-a emit-quote log]
     (:account/api account-config)))
+
+(defprotocol quote-messaging
+  (subscribe-msg [this sub])
+  (unsubscribe-msg [this unsub])
+  (read-quote [this msg-in]))
+
+(defmulti create-quote-messaging
+  "a tradeaccount must implement this method to create it.
+   each quotefeed implementation must have a unique :type.
+     A quotefeed must implement subscription-topic protocol."
+  (fn [account-config asset-converter log]
+    (:account/api account-config)))

@@ -1,53 +1,21 @@
 (ns fix-engine.impl.interactor.quote
   (:require
-   [clojure.set :refer [rename-keys]]
+   [clojure.set :refer [difference]]
    [missionary.core :as m]
-   [nano-id.core :refer [nano-id]]
-   [quanta.quote.subscription :refer [sub-unsub-sets]]
-   [fix-translator.ctrader :refer [get-asset-id get-asset-name]])
+   [quanta.quote.protocol :as p])
   (:import missionary.Cancelled))
+ 
+(defn- sub-unsub-sets [old new]
+  (let [unsub (difference old new)
+        sub (difference new old)]
+    {:sub sub :unsub unsub}))
 
-(defn- eventually-add-last-volume [{:keys [bid ask] :as quote}]
-  (if (and bid ask)
-    (assoc quote :price (/ (+ bid ask) 2.0M)
-           :volume 1.0M
-           :spread (- ask bid))
-    (assoc quote :volume 0.0M)))
+(comment
+  (sub-unsub-sets #{1 2 3} #{2 3 4})
+  ;
+  )
 
-(defn- payload->quote
-  [[msg-type {:keys [symbol no-mdentries]}]]
-  (when (= msg-type :market-data-snapshot-full-refresh)
-    (let [quote (reduce (fn [s {:keys [mdentry-type mdentry-px]}]
-                          (assoc s mdentry-type mdentry-px))
-                        {} no-mdentries)]
-      (-> quote
-          (rename-keys {:offer :ask})
-          (assoc :asset symbol)
-          (eventually-add-last-volume)))))
-
-(defn- normalize-quote [asset-converter quote]
-  (update quote :asset #(get-asset-name asset-converter %)))
-
-(defn- subscribe-payload [asset-ids]
-  [:market-data-request
-   {:mdreq-id (nano-id 5)
-    :subscription-request-type :snapshot-plus-updates
-    :market-depth 1
-    :mdupdate-type :incremental-refresh
-    :no-mdentry-types [{:mdentry-type :bid} {:mdentry-type :offer}]
-    :no-related-sym (mapv (fn [asset-id] {:symbol asset-id}) asset-ids)}])
-
-(defn- unsubscribe-payload [asset-ids]
-  [:market-data-request
-   {:mdreq-id (nano-id 5)
-    :subscription-request-type :disable-previous-snapshot-plus-update-request
-    :market-depth 1
-    :mdupdate-type :incremental-refresh
-    :no-mdentry-types [{:mdentry-type :bid} {:mdentry-type :offer}]
-    :no-related-sym (mapv (fn [asset-id] {:symbol asset-id}) asset-ids)}])
-
-
-(defn process-subscription-changes [subscription-f asset-converter push session-log]
+(defn process-subscription-changes [quote-message-processor subscription-f push session-log]
   (m/ap
    (let [assets-old (atom #{})
          assets-new (m/?> 1 subscription-f)
@@ -56,55 +24,33 @@
      (reset! assets-old assets-new)
        ; subscribe
      (when (seq sub)
-       (let [asset-ids (mapv #(get-asset-id asset-converter %) sub)
-             msg (subscribe-payload asset-ids)]
-         (session-log {:type :subscribe :assets sub :broker-assets asset-ids})
+       (println "subscription-watcher subscribing to: " sub)
+       (let [msg (p/subscribe-msg quote-message-processor sub)]
          (m/? (push msg))))
        ; unsubscribe
      (when (seq unsub)
-       (let [asset-ids (mapv #(get-asset-id asset-converter %) unsub)
-             msg (unsubscribe-payload asset-ids)]
-         (session-log {:type :unsubscribe :assets unsub :broker-assets asset-ids})
+       (println "subscription-watcher unsubscribing from: " unsub)
+       (let [msg (p/unsubscribe-msg quote-message-processor unsub)]
          (m/? (push msg)))))))
 
 
 (defn- subscription-watcher
-  [subscription-a asset-converter push session-log]
+  [quote-message-processor subscription-a push session-log]
   (let [sub-f (m/watch subscription-a)
         sub-f (m/relieve sub-f)
-        sub-process-f (process-subscription-changes sub-f asset-converter push session-log)]
+        sub-process-f (process-subscription-changes quote-message-processor sub-f push session-log)]
     (m/reduce (fn [_ _] nil) nil sub-process-f)))
 
 
 (defn- message-loop
-  [pull session-log asset-converter send-quote]
+  [quote-message-processor pull log send-quote]
   (m/sp
    (try
      (loop []
        (when-let [fix-payload (m/? (pull))]
-         (let [[msg-type payload] fix-payload]
-           (case msg-type
-
-             :market-data-snapshot-full-refresh ; full refresh for top-of-book
-             (when-let [q (payload->quote fix-payload)]
-               (let [normalized (normalize-quote asset-converter q)]
-                 (send-quote normalized)))
-
-             :market-data-incremental-refresh ; incremental refresh for orderbook
-             (when-let [q (payload->quote fix-payload)]
-               (println "incremental refresh: " q)
-               (let [normalized (normalize-quote asset-converter q)]
-                 (send-quote normalized)))
-
-             :market-data-request-reject
-             (session-log {:type :subscription-failure :direction :in :data payload})
-
-             :logout
-             (throw (ex-info "session-reset" {:msg "logout message received" :text (str payload)})))
-
-           ;else
-           nil)
-         (recur)))
+         (when-let [normalized (p/read-quote quote-message-processor fix-payload)]
+           (send-quote normalized)))
+       (recur))
      (catch Cancelled _
        true))))
 
@@ -112,9 +58,10 @@
   "quote-rdv: missionary rendezvous from (m/rdv); consumer takes with (m/? quote-rdv),
    producer gives with (m/? (quote-rdv value))."
   [subscription-a send-quote]
-  (fn [_fix-account-config _connection-id push pull session-log asset-converter]
-    (m/sp
-     (session-log {:type :interactor-start})
-     (m/? (m/join vector
-                  (subscription-watcher subscription-a asset-converter push session-log)
-                  (message-loop pull session-log asset-converter send-quote))))))
+  (fn [account-config _connection-id push pull log asset-converter]
+    (let [quote-message-processor (p/create-quote-messaging account-config asset-converter log)]
+      (m/sp
+       (log {:type :interactor-start})
+       (m/? (m/join vector
+                    (subscription-watcher quote-message-processor subscription-a push log)
+                    (message-loop quote-message-processor pull log send-quote)))))))
