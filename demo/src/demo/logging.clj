@@ -1,7 +1,7 @@
 (ns demo.logging
   (:require
    [missionary.core :as m]
-   [fix-engine.logger :refer [create-logger start-logging-flow]]))
+   [quanta.util.logger :refer [create-logger start-logging-flow]]))
 
 (defn data-producer [max-delay-ms]
   (m/ap

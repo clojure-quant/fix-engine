@@ -1,7 +1,6 @@
 (ns fix-engine.impl.tcp.boot
   (:require
    [missionary.core :as m]
-   [fix-engine.account :as account]
    [fix-engine.impl.tcp.socket :as socket]
    [fix-engine.impl.fix-session :as fix-session])
   (:import missionary.Cancelled))
@@ -26,7 +25,7 @@
 (defn- connect-and-run [account log interactor]
   (m/sp
    (try
-     (log  (-> (select-keys (:tcp (account/settings account)) [:host :port :ssl])
+     (log  (-> (select-keys (:tcp (:account/settings account)) [:host :port :ssl])
                (assoc :account/id (:account/id account)
                       :type :tcp/connect)))
      (let [tcp-socket (m/? (socket/connect account))

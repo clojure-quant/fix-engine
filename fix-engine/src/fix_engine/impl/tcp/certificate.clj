@@ -2,7 +2,7 @@
   (:require
    [clojure.string :as str]
    [clojure.java.io :as io]
-   [fix-engine.logger :refer [log]])
+   [quanta.util.logger :refer [log]])
   (:import
    (io.netty.handler.ssl SslContextBuilder)))
 
