@@ -31,12 +31,8 @@
    (loop []
      (let [update (m/? res-rdv)]
        (when update
-         (if (schema/validate-message update)
-           (m/? (push update))
-           (log {:type :orderupdate-validation-failure
-                 :data {:message update
-                        :errors (schema/human-error-message update)}})))
-       (recur)))))
+         (m/? (push update))))
+     (recur))))
 
 (defmethod p/create-trade-account :fix-trade
   [{:keys [account/id] :as account-config} order-rdv update-rdv log]

@@ -5,7 +5,15 @@
 
 (def demo-order-action-flow
   (create-time-flow
-   [5 {:type :trader/new-order
+   [1 {:type :trader/open-positions
+       :account/id 1000
+       :req-id "open-positions-req-1"
+       }
+    1 {:type :trader/working-orders
+       :account/id 1000
+       :req-id "working-orders-req-1"}
+    
+    5 {:type :trader/new-order
        :account/id 1000
        :order-id "fix-1"
        :asset "EURUSD"

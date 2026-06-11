@@ -34,7 +34,7 @@
 (defn- validate-order-type [order-type limit]
   (case order-type
     :limit (when-not limit
-            (throw (reject-message "limit orders require :limit")))
+             (throw (reject-message "limit orders require :limit")))
     :market (when limit
               (throw (reject-message "market orders must not include :limit")))
     (throw (reject-message "order-type must be :limit or :market"))))
@@ -45,7 +45,7 @@
 (defn blotter-order->fix-payload
   "Blotter trader order -> fix-translator [msg-type payload]."
   [order asset-converter]
-  (let [{:keys [type order-id asset side qty limit order-type account/id]} order]
+  (let [{:keys [type order-id asset side qty limit order-type account/id req-id]} order]
     (case type
       :trader/new-order
       (let [_ (validate-order-type order-type limit)
@@ -62,6 +62,13 @@
       [:order-cancel-request {:orig-cl-ord-id (->order-id order-id)
                               :cl-ord-id (nano-id 8)}]
 
+      :trader/open-positions
+      [:request-for-positions {:pos-req-id req-id}]
+
+      :trader/working-orders
+      [:order-mass-status-request {:mass-status-req-id req-id
+                                   :mass-status-req-type :status-for-all-orders}]
+
       (throw (ex-info "unsupported blotter order type"
                       {:type type :account/id id})))))
 
@@ -73,8 +80,8 @@
         date (->instant (:transact-time payload))
         exec-type (:exec-type payload)
         ord-status (:ord-status payload)]
-    (cond
-      (or (= exec-type :new) (= ord-status :new))
+    (case exec-type
+      :new ;; new order confirmed
       (when (and asset order-id)
         (let [order-type (fix-ord-type->order-type (:ord-type payload) (:price payload))]
           (cond-> {:type :broker/order-confirmed
@@ -85,12 +92,31 @@
                    :qty (->decimal (:order-qty payload))
                    :order-type order-type
                    :date date
-                   :message (or (:text payload) "order confirmed")}
+                   :message (or (:text payload) "")}
             (= :limit order-type) (assoc :limit (->decimal (:price payload))))))
 
-      (or (= exec-type :trade)
-          (= ord-status :partially-filled)
-          (= ord-status :filled))
+      :order-status ;; partial response to a position-report request
+      (when (and asset order-id)
+        (let [order-type (fix-ord-type->order-type (:ord-type payload) (:price payload))]
+          (cond-> {:type :broker/order-status
+                   :account/id account-id
+                   :order-id order-id
+                   :asset asset
+                   :side (:side payload)
+                   :qty (->decimal (:order-qty payload))
+                   :order-type order-type
+                   :date date
+                   ;:message (or (:text payload) "")
+                   :time-in-force (:time-in-force payload)
+                   :leaves-qty (->decimal (:leaves-qty payload))
+                   :cum-qty (->decimal (:cum-qty payload))
+                   :broker-order-id (:order-id payload)}
+            (= :limit order-type) (assoc :limit (->decimal (:price payload)))
+            (:message payload) (assoc :message (:message payload))
+            )))
+
+      ;; execution
+      :trade
       (when (and asset order-id)
         {:type :broker/order-filled
          :account/id account-id
@@ -102,7 +128,8 @@
          :side (:side payload)
          :price (->decimal (or (:last-px payload) (:avg-px payload) (:price payload)))})
 
-      (or (= exec-type :rejected) (= ord-status :rejected))
+      ;; rejection
+      :rejected
       (when order-id
         {:type :broker/order-rejected
          :account/id account-id
@@ -110,14 +137,26 @@
          :date date
          :message (or (:text payload) (some-> (:ord-rej-reason payload) str))})
 
-      (or (= exec-type :canceled) (= ord-status :canceled))
+      ;; cancellation
+      :canceled
       (when order-id
         {:type :broker/order-canceled
          :account/id account-id
          :order-id order-id
          :date date})
 
-      :else nil)))
+      :expired
+      (when order-id
+        {:type :broker/order-expired
+         :account/id account-id
+         :order-id order-id
+         :date date})
+
+      :replace ;; what does this mean??
+      nil
+
+          ; else 
+      nil)))
 
 (defn- business-message-reject->blotter
   [account-id payload]
@@ -138,6 +177,29 @@
      :order-id (->order-id order-id)
      :message (or (:text payload) "cancel rejected")}))
 
+
+(defn- position-report->blotter [account-id asset-converter payload]
+  (let [{:keys [symbol pos-req-id no-positions settl-price total-num-pos-reports pos-maint-rpt-id]} payload
+        asset (when symbol
+                (get-asset-name asset-converter symbol))]
+    {:type :broker/positions-item
+     :account/id account-id
+     :req-id pos-req-id
+     :asset asset
+     :position no-positions
+     :position-id pos-maint-rpt-id
+     :settl-price settl-price
+     :total total-num-pos-reports}))
+
+#_[:position-report
+   {:symbol "1"
+    :pos-req-id "GQgHl"
+    :pos-maint-rpt-id "221436915"
+    :total-num-pos-reports 4
+    :pos-req-result :valid-request
+    :settl-price 1.16395M
+    :no-positions [{:long-qty 1000M :short-qty 0M}]}]
+
 (defn fix-payload->blotter-update
   "fix-translator [msg-type payload] -> blotter broker message or nil."
   [account-id asset-converter [msg-type payload]]
@@ -145,4 +207,5 @@
     :execution-report (execution-report->blotter account-id asset-converter payload)
     :business-message-reject (business-message-reject->blotter account-id payload)
     :order-cancel-reject (order-cancel-reject->blotter account-id payload)
+    :position-report (position-report->blotter account-id asset-converter payload)
     nil))
