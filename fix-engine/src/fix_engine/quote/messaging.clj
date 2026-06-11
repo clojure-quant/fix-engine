@@ -1,16 +1,9 @@
-(ns fix-engine.quote.fix-quote
+(ns fix-engine.quote.messaging
   (:require
    [clojure.set :refer [rename-keys]]
    [nano-id.core :refer [nano-id]]
    [quanta.quote.protocol :as p]
-   [fix-translator.ctrader :refer [get-asset-id get-asset-name]]
-   [fix-engine.impl.tcp.boot :refer [boot-with-retry]]
-   [fix-engine.impl.interactor.quote :refer [create-quote-interactor]]))
-
-(defmethod p/create-quote-account :fix-quote
-  [{:keys [account/id] :as account-config} subscription-a send-quote log]
-  (let [interactor (create-quote-interactor subscription-a send-quote)]
-    (boot-with-retry account-config log interactor)))
+   [fix-translator.ctrader :refer [get-asset-id get-asset-name]]))
 
 ;; subscription management
 

@@ -1,7 +1,7 @@
-(ns fix-engine.quote.fix-quote-test
+(ns fix-engine.quote.messaging-test
   (:require [clojure.test :refer [deftest is testing]]
             [quanta.quote.protocol :as p]
-            [fix-engine.quote.fix-quote]))
+            [fix-engine.quote.messaging]))
 
 (def asset-converter
   {:dict-by-name {"EURUSD" "1" "USDJPY" "2"}

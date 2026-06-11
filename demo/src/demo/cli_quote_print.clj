@@ -3,7 +3,7 @@
    [missionary.core :as m]
    [quanta.quote.account-manager :refer [create-account-manager add-edn-accounts get-account]]
    [quanta.blotter.logger :refer [create-logger log start-log-flow-to-logger]]
-   [fix-engine.quote.fix-quote] ; side-effects
+   [fix-engine.quote.account] ; side-effects
    ))
 
 (defn quote-printer [f]

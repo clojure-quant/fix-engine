@@ -1,10 +1,10 @@
-(ns fix-engine.impl.interactor.quote
+(ns quanta.quote.interactor
   (:require
    [clojure.set :refer [difference]]
    [missionary.core :as m]
    [quanta.quote.protocol :as p])
   (:import missionary.Cancelled))
- 
+
 (defn- sub-unsub-sets [old new]
   (let [unsub (difference old new)
         sub (difference new old)]
