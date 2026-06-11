@@ -1,4 +1,4 @@
-(ns fix-engine.impl.tcp.certificate
+(ns quanta.util.certificate
   (:require
    [clojure.string :as str]
    [clojure.java.io :as io]

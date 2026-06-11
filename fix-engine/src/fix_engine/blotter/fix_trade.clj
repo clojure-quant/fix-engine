@@ -4,7 +4,8 @@
    [quanta.blotter.protocol :as p]
    [quanta.blotter.oms.validation.schema :as schema]
    [fix-engine.blotter.trade-mapping :refer [blotter-order->fix-payload]]
-   [fix-engine.impl.tcp.boot :refer [boot-with-retry]]
+   [quanta.util.boot :refer [boot-with-retry]]
+   [fix-engine.impl.connect]
    [fix-engine.impl.interactor.trade :refer [create-trade-interactor]]))
 
 (defn- fix-account-config [account-config]
@@ -35,11 +36,13 @@
      (recur))))
 
 (defmethod p/create-trade-account :fix-trade
-  [{:keys [account/id] :as account-config} order-rdv update-rdv log]
-  (let [req-rdv (m/rdv)
+  [account order-rdv update-rdv log]
+  (let [account (assoc account :account/session :fix)
+        {:keys [account/id]} account
+        req-rdv (m/rdv)
         res-rdv (m/rdv)
         interactor (create-trade-interactor req-rdv res-rdv)
-        boot-account (fix-account-config account-config)
+        boot-account (fix-account-config account)
         boot-log (account-log-fn id log)]
     (m/sp
      (m/? (m/join vector

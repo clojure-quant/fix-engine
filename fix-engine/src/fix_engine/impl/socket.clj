@@ -1,4 +1,4 @@
-(ns fix-engine.impl.tcp.socket
+(ns fix-engine.impl.socket
   (:require
    [missionary.core :as m]
    [aleph.tcp :as tcp]
@@ -7,7 +7,7 @@
    [gloss.io :as io]
    [fix-translator.gloss :refer [fix-protocol]]
    [fix-translator.message-wire :refer [vec->wire]]
-   [fix-engine.impl.tcp.certificate :refer [create-certificate-manager]])
+   [quanta.util.certificate :refer [create-certificate-manager]])
   (:import missionary.Cancelled))
 
 (defn- dbg [& args]

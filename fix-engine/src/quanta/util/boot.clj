@@ -1,9 +1,7 @@
-(ns fix-engine.impl.tcp.boot
+(ns quanta.util.boot
   (:require
    [missionary.core :as m]
-   [fix-engine.impl.tcp.socket :as socket]
-   [fix-engine.impl.fix-session :as fix-session])
-  (:import missionary.Cancelled))
+   [quanta.util.session :as session]))
 
 (defn- dbg [& args]
   (apply println "[boot]" args)
@@ -22,29 +20,6 @@
 (def ^:private fib (map first (iterate fib-iter [1 1])))
 (def ^:private retry-delays (map (partial * 100) (next fib)))
 
-(defn- connect-and-run [account log interactor]
-  (m/sp
-   (try
-     (log  (-> (select-keys (:tcp (:account/settings account)) [:host :port :ssl])
-               (assoc :account/id (:account/id account)
-                      :type :tcp/connect)))
-     (let [tcp-socket (m/? (socket/connect account))
-           _ (log {:type :tcp/connected :account/id (:account/id account)})
-           {:keys [run connection-id]} (fix-session/create-fix-session-task account tcp-socket log interactor)]
-       (log {:type :fix-session/starting :account/id (:account/id account)})
-       (m/? run)
-       (log {:type :fix-session/stopped :account/id (:account/id account)})
-       :run-finally)
-     (catch java.net.UnknownHostException e
-       ;(dbg "connect-and-run: UnknownHostException" (.getMessage e))
-       (log {:type :tcp/connect-ex :account/id (:account/id account) :message "Unknown Host"})
-       :host-unknown)
-     (catch Exception e
-       (dbg "connect-and-run: Exception" (ex-message e))
-       (.printStackTrace e)
-       (log {:type :fix-session-run-ex :account/id (:account/id account)})
-       :connect-ex))))
-
 (defn boot-with-retry
   "Connects with fibonacci backoff and runs fix-session until disconnect or failure.
    `account` is a map with `:account/api` `:fix` and `:account/settings`.
@@ -54,7 +29,7 @@
    (dbg "boot-with-retry: started")
    (loop [delays retry-delays n 1]
      (dbg "boot-with-retry: attempt" n)
-     (if-some [exit (m/? (connect-and-run account log interactor))]
+     (if-some [exit (m/? (session/connect-and-run account log interactor))]
        (let [next-delays (case exit
                            :host-unknown nil
                            :connect-ex delays
