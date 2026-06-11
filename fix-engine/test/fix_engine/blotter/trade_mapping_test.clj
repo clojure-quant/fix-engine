@@ -212,3 +212,34 @@
     (is (= "fix-4" (:order-id msg)))
     (is (= "MARKET_CLOSED:Trading is not available: Market is closed." (:message msg)))
     (valid-broker? msg)))
+
+(deftest execution-report-order-status-test
+  (is (= {:type :broker/order-status
+          :account/id 1000
+          :order-id "fix-1"
+          :asset "EURUSD"
+          :side :buy
+          :qty 1000M
+          :order-type :limit
+          :limit 1.05M
+          :date (t/instant "2026-06-11T00:22:07.158Z")
+          :time-in-force :good-till-cancel
+          :leaves-qty 1000M
+          :cum-qty 0M
+          :broker-order-id "343556096"}
+         (tm/fix-payload->blotter-update
+          1000 asset-converter
+          [:execution-report {:ord-type :limit
+                              :time-in-force :good-till-cancel
+                              :symbol "1"
+                              :leaves-qty 1000M
+                              :cl-ord-id "fix-1"
+                              :ord-status :new
+                              :order-qty 1000M
+                              :exec-type :order-status
+                              :order-id "343556096"
+                              :mass-status-req-id "working-orders-req-1"
+                              :cum-qty 0M
+                              :transact-time (t/instant "2026-06-11T00:22:07.158Z")
+                              :side :buy
+                              :price 1.05M}]))))
