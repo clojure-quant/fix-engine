@@ -2,7 +2,7 @@
   (:require
    [nano-id.core :refer [nano-id]]
    [tick.core :as t]
-   [quanta.blotter.protocol2 :as p]
+   [quanta.blotter.protocol :as p]
    [fix-translator.ctrader :refer [get-asset-id get-asset-name]])
   (:import [java.math BigDecimal]
            [java.time Instant]))
