@@ -3,7 +3,7 @@
    [nano-id.core :refer [nano-id]]
    [tick.core :as t]
    [quanta.blotter.protocol :as p]
-   [fix-translator.ctrader :refer [get-asset-id get-asset-name]])
+   [quanta.asset.mapper :as am])
   (:import [java.math BigDecimal]
            [java.time Instant]))
 
@@ -50,7 +50,7 @@
     (case type
       :trader/new-order
       (let [_ (validate-order-type order-type limit)
-            symbol-id (get-asset-id asset-converter asset)]
+            symbol-id (am/to-api asset-converter asset)]
         (cond-> [:new-order-single {:cl-ord-id (->order-id order-id)
                                     :symbol symbol-id
                                     :side side
@@ -76,7 +76,7 @@
 (defn- execution-report->blotter
   [account-id asset-converter payload]
   (let [asset (when-let [s (:symbol payload)]
-                (get-asset-name asset-converter s))
+                (am/from-api asset-converter s))
         order-id (or (:cl-ord-id payload) (:order-id payload))
         date (->instant (:transact-time payload))
         exec-type (:exec-type payload)
@@ -181,7 +181,7 @@
 (defn- position-report->blotter [account-id asset-converter payload]
   (let [{:keys [symbol pos-req-id no-positions settl-price total-num-pos-reports pos-maint-rpt-id]} payload
         asset (when symbol
-                (get-asset-name asset-converter symbol))]
+                (am/from-api asset-converter symbol))]
     {:type :broker/positions-item
      :account/id account-id
      :req-id pos-req-id

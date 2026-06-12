@@ -7,7 +7,8 @@
    [fix-translator.message :refer [encode-message]]
    [fix-translator.session :refer [create-session fix-msg-vec->payload]]
    [fix-translator.message-wire :refer [vec->wire wire->vec]]
-   [fix-translator.ctrader :refer [seclist->assets create-asset-converter]])
+   [quanta.asset.mapper :refer [create-asset-mapper] :as am]
+   [fix-engine.impl.asset-converter :refer [seclist->assets set-asset-list]])
   (:import missionary.Cancelled))
 
 (defn- dbg [& args]
@@ -106,6 +107,7 @@
         run (m/sp
              (let [keepalive (m/mbx)
                    reader (tcp-reader tcp-pull session log* in-mbx keepalive)
+                   asset-converter (create-asset-mapper account log)
                    session-body (m/sp
                                  (try
                                    (dbg "session: connecting")
@@ -121,7 +123,7 @@
                                          (recur (inc n)))))
                                    (dbg "session: requesting security-list")
                                    (m/? (push (security-list-request)))
-                                   (let [asset-converter
+                                   (let [_
                                          (loop [n 0]
                                            (let [fix-payload (m/? (pull))
                                                  [msg-type _] fix-payload]
@@ -130,7 +132,7 @@
                                                :security-list
                                                (do (dbg "session: security-list ok, assets="
                                                         (count (or (seclist->assets fix-payload) [])))
-                                                   (or (create-asset-converter (seclist->assets fix-payload))
+                                                   (or (set-asset-list asset-converter (seclist->assets fix-payload))
                                                        (throw (ex-info "security-list invalid" {:payload fix-payload}))))
                                                :logout
                                                (throw (ex-info "logout before security-list" {:payload fix-payload}))

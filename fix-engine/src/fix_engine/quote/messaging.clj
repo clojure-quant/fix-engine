@@ -3,7 +3,7 @@
    [clojure.set :refer [rename-keys]]
    [nano-id.core :refer [nano-id]]
    [quanta.quote.protocol :as p]
-   [fix-translator.ctrader :refer [get-asset-id get-asset-name]]))
+   [quanta.asset.mapper :as am]))
 
 ;; subscription management
 
@@ -46,7 +46,7 @@
           (eventually-add-last-volume)))))
 
 (defn- normalize-quote [asset-converter quote]
-  (update quote :asset #(get-asset-name asset-converter %)))
+  (update quote :asset #(am/from-api asset-converter %)))
 
 
 ;; protocol implementation
@@ -54,12 +54,12 @@
 (defrecord quote-feed-fix [account-config asset-converter log]
   p/quote-messaging
   (subscribe-msg [_ sub]
-    (let [asset-ids (mapv #(get-asset-id asset-converter %) sub)
+    (let [asset-ids (mapv #(am/to-api asset-converter %) sub)
           msg (subscribe-payload asset-ids)]
       (log {:type :subscribe :assets sub :broker-assets asset-ids})
       msg))
   (unsubscribe-msg [_ unsub]
-    (let [asset-ids (mapv #(get-asset-id asset-converter %) unsub)
+    (let [asset-ids (mapv #(am/to-api asset-converter %) unsub)
           msg (unsubscribe-payload asset-ids)]
       (log {:type :unsubscribe :assets unsub :broker-assets asset-ids})
       msg))

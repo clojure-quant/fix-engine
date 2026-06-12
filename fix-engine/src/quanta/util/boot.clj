@@ -39,7 +39,7 @@
          (dbg "boot-with-retry: exit=" exit "will-retry?" (boolean next-delays))
          (if-some [backoff-ms (first next-delays)]
            (do
-             (dbg "boot-with-retry: sleeping" backoff-ms "ms before retry")
+             (dbg "boot-with-retry: sleeping " backoff-ms " ms before retry")
              (m/? (m/sleep backoff-ms))
              (recur (rest next-delays) (inc n)))
            (dbg "boot-with-retry: done, no more retries")))
