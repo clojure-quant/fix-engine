@@ -1,10 +1,10 @@
-(ns fix-engine.blotter.trade-mapping-test
+(ns fix-engine.blotter.messaging-test
   (:require
    [clojure.test :refer [deftest is testing]]
    [tick.core :as t]
    [quanta.blotter.oms.validation.schema :as schema]
    [fix-translator.session :refer [create-session fix-msg-vec->payload]]
-   [fix-engine.blotter.trade-mapping :as tm]))
+   [fix-engine.blotter.messaging :as tm]))
 
 (def asset-converter
   {:dict-by-name {"EURUSD" "1" "GBPUSD" "2"}

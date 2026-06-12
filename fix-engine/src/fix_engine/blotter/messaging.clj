@@ -1,7 +1,8 @@
-(ns fix-engine.blotter.trade-mapping
+(ns fix-engine.blotter.messaging
   (:require
    [nano-id.core :refer [nano-id]]
    [tick.core :as t]
+   [quanta.blotter.protocol2 :as p]
    [fix-translator.ctrader :refer [get-asset-id get-asset-name]])
   (:import [java.math BigDecimal]
            [java.time Instant]))
@@ -112,8 +113,7 @@
                    :cum-qty (->decimal (:cum-qty payload))
                    :broker-order-id (:order-id payload)}
             (= :limit order-type) (assoc :limit (->decimal (:price payload)))
-            (:message payload) (assoc :message (:message payload))
-            )))
+            (:message payload) (assoc :message (:message payload)))))
 
       ;; execution
       :trade
@@ -209,3 +209,14 @@
     :order-cancel-reject (order-cancel-reject->blotter account-id payload)
     :position-report (position-report->blotter account-id asset-converter payload)
     nil))
+
+(defrecord trade-messaging-fix [account asset-converter log]
+  p/trade-messaging
+  (api-order [_ blotter-msg-in]
+    (blotter-order->fix-payload blotter-msg-in asset-converter))
+  (blotter-order-update [_ api-msg-in]
+    (fix-payload->blotter-update (:account/id account) asset-converter api-msg-in)))
+
+(defmethod p/create-trade-messaging :fix-trade
+  [account asset-converter log]
+  (trade-messaging-fix. account asset-converter log))

@@ -1,9 +1,7 @@
-(ns fix-engine.impl.interactor.trade
+(ns quanta.blotter.interactor
   (:require
    [missionary.core :as m]
-   [nano-id.core :refer [nano-id]]
-   [tick.core :as t]
-   [fix-engine.blotter.trade-mapping :refer [blotter-order->fix-payload fix-payload->blotter-update]])
+   [quanta.blotter.protocol2 :as p])
   (:import missionary.Cancelled))
 
 (def ^:private max-req-age-ms 5000)
@@ -14,12 +12,12 @@
                 max-req-age-ms))))
 
 (defn- request-loop
-  [req-rdv opts asset-converter push log]
+  [trade-message-processor req-rdv push log]
   (m/sp
    (loop []
      (let [req (m/? req-rdv)
            _ (println "request: " req)
-           fix-payload (blotter-order->fix-payload req asset-converter)]
+           fix-payload (p/api-order trade-message-processor req)]
        (when fix-payload   ;(fresh-request? req)
          (try
            (m/? (push fix-payload))
@@ -30,24 +28,22 @@
        (recur)))))
 
 (defn- message-loop
-  [pull log {:keys [account/id] :as opts} asset-converter res-rdv]
+  [trade-message-processor pull log res-rdv]
   (m/sp
    (try
      (loop []
        (when-let [fix-payload (m/? (pull))]
-         (let [[msg-type _] fix-payload]
-           (when (= msg-type :logout)
-             (throw (ex-info "session-reset" {:msg "logout message received"})))
-           (when-let [update (fix-payload->blotter-update id asset-converter fix-payload)]
+           (when-let [update (p/blotter-order-update trade-message-processor fix-payload)]
              (m/? (res-rdv update))))
-         (recur)))
+         (recur))
      (catch Cancelled _
        true))))
 
 (defn create-trade-interactor
   [req-rdv res-rdv]
-  (fn [account-config _connection-id push pull log asset-converter]
+  (fn [account _connection-id push pull log asset-converter]
+    (let [trade-message-processor (p/create-trade-messaging account asset-converter log)]
     (m/sp
      (m/? (m/join vector
-                  (request-loop req-rdv account-config asset-converter push log)
-                  (message-loop pull log account-config asset-converter res-rdv))))))
+                  (request-loop trade-message-processor req-rdv push log)
+                  (message-loop trade-message-processor pull log res-rdv)))))))

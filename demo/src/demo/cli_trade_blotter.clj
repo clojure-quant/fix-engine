@@ -7,7 +7,7 @@
    [quanta.blotter.logger :refer [create-logger log start-log-flow-to-logger]]
    [quanta.blotter.util :refer [push-flow-to-rdv]]
    [quanta.blotter.paper.broker]
-   [fix-engine.blotter.fix-trade]
+   [fix-engine.blotter.account]
    [demo.util.orderflow-simulated :refer [demo-order-action-flow]]
    [demo.util.update-printer :refer [create-orderupdate-printer]]))
 
