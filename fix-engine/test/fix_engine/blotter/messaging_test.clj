@@ -4,11 +4,15 @@
    [tick.core :as t]
    [quanta.blotter.oms.validation.schema :as schema]
    [fix-translator.session :refer [create-session fix-msg-vec->payload]]
+   [fix-engine.impl.asset-converter :refer [set-asset-list]]
+   [quanta.asset.mapper :refer [create-asset-mapper]]
    [fix-engine.blotter.messaging :as tm]))
 
 (def asset-converter
-  {:dict-by-name {"EURUSD" "1" "GBPUSD" "2"}
-   :dict-by-id {"1" "EURUSD" "2" "GBPUSD"}})
+  (let [m (create-asset-mapper {:account/session :fix} (constantly nil))]
+    (set-asset-list m [{:asset "EURUSD" :ctrader "1"}
+                       {:asset "GBPUSD" :ctrader "2"}])
+    m))
 
 (defn- valid-broker? [msg]
   (is (schema/validate-message msg)

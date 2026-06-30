@@ -1,11 +1,15 @@
 (ns fix-engine.quote.messaging-test
   (:require [clojure.test :refer [deftest is testing]]
             [quanta.quote.protocol :as p]
+            [fix-engine.impl.asset-converter :refer [set-asset-list]]
+            [quanta.asset.mapper :refer [create-asset-mapper]]
             [fix-engine.quote.messaging]))
 
 (def asset-converter
-  {:dict-by-name {"EURUSD" "1" "USDJPY" "2"}
-   :dict-by-id {"1" "EURUSD" "2" "USDJPY"}})
+  (let [m (create-asset-mapper {:account/session :fix} (constantly nil))]
+    (set-asset-list m [{:asset "EURUSD" :ctrader "1"}
+                       {:asset "USDJPY" :ctrader "2"}])
+    m))
 
 (def account-config {:account/api :fix-quote})
 
