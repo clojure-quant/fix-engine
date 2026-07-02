@@ -7,7 +7,7 @@
         nano-id/nano-id {:mvn/version "1.1.0"}
         tick/tick {:mvn/version "0.6.1"}
         io.github.clojure-quant/quanta-blotter {:mvn/version "0.1.42"}
-        io.github.clojure-quant/fix-encoding {:mvn/version "0.1.74"}
+        io.github.clojure-quant/fix-encoding {:mvn/version "0.1.75"}
         }
 
  :aliases
