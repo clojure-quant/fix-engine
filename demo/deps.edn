@@ -7,4 +7,6 @@
           :main-opts  ["-m" "nrepl.cmdline"]}
   
   :quote-print {:exec-fn demo.cli-quote-print/start-cli}
-  :blotter-trade {:exec-fn demo.cli-trade-blotter/start-cli}}}
+  :blotter-trade {:exec-fn demo.cli-trade-blotter/start-cli}
+  :lint {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2024.11.14"}}
+         :main-opts ["-m" "clj-kondo.main" "--fail-level" "error" "--lint" "src"]}}}

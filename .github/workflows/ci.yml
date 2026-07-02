@@ -29,6 +29,9 @@ jobs:
       run: clojure -M:test
     - name: Lint
       run: clojure -M:lint
+    - name: Lint demo
+      working-directory: demo
+      run: clojure -M:lint
     - name: Release
       if: success()
       env:

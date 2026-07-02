@@ -1,6 +1,6 @@
 (ns fix-engine.blotter.messaging-test
   (:require
-   [clojure.test :refer [deftest is testing]]
+   [clojure.test :refer [deftest is]]
    [tick.core :as t]
    [quanta.blotter.oms.validation.schema :as schema]
    [fix-translator.session :refer [create-session fix-msg-vec->payload]]
@@ -149,12 +149,14 @@
 (deftest execution-report-canceled-test
   (let [msg (tm/fix-payload->blotter-update
              5292473 asset-converter
-             [:execution-report {:cl-ord-id "ord-1"
+             [:execution-report {:cl-ord-id "cxl-req-1"
+                                :orig-cl-ord-id "ord-1"
                                 :symbol "1"
                                 :exec-type :canceled
                                 :ord-status :canceled
                                 :transact-time (t/instant)}])]
     (is (= :broker/order-canceled (:type msg)))
+    (is (= "ord-1" (:order-id msg)))
     (valid-broker? msg)))
 
 (deftest order-cancel-reject-test
@@ -208,6 +210,39 @@
                             :sender-comp-id "demo.pepperstone.5292473"
                             :target-sub-id "TRADE"
                             :sender-sub-id "TRADE"}}))
+
+(def cancel-limit-wire-msg
+  [["8" "FIX.4.4"] ["9" "231"] ["35" "8"] ["34" "6"] ["49" "CSERVER"] ["50" "TRADE"]
+   ["52" "20260701-18:33:15.611"] ["56" "demo.pepperstone.5292473"] ["57" "TRADE"]
+   ["11" "Dz4oKsjs"] ["14" "0"] ["37" "347123251"] ["38" "10000"] ["39" "4"] ["40" "2"]
+   ["41" "KAxuPb"] ["44" "1.1035"] ["54" "1"] ["55" "1"] ["59" "1"]
+   ["60" "20260701-18:33:15.604"] ["150" "4"] ["151" "10000"] ["721" "229582264"] ["10" "038"]])
+
+(deftest execution-report-canceled-wire->blotter-test
+  (let [fix-payload (fix-msg-vec->payload trade-session cancel-limit-wire-msg)
+        [msg-type payload] fix-payload
+        msg (tm/fix-payload->blotter-update 1000 asset-converter fix-payload)]
+    (is (= :execution-report msg-type))
+    (is (= {:cl-ord-id "Dz4oKsjs"
+            :cum-qty 0M
+            :order-id "347123251"
+            :order-qty 10000M
+            :ord-status :canceled
+            :ord-type :limit
+            :orig-cl-ord-id "KAxuPb"
+            :price 1.1035M
+            :side :buy
+            :symbol "1"
+            :time-in-force :good-till-cancel
+            :transact-time (t/instant "2026-07-01T18:33:15.604Z")
+            :exec-type :canceled
+            :leaves-qty 10000M
+            :pos-maint-rpt-id "229582264"}
+           payload))
+    (is (= :broker/order-canceled (:type msg)))
+    (is (= 1000 (:account/id msg)))
+    (is (= "KAxuPb" (:order-id msg)))
+    (valid-broker? msg)))
 
 (deftest business-message-reject-wire->blotter-test
   (let [fix-payload (fix-msg-vec->payload trade-session business-reject-wire-msg)

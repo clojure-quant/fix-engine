@@ -139,10 +139,10 @@
 
       ;; cancellation
       :canceled
-      (when order-id
+      (when-let [canceled-order-id (or (:orig-cl-ord-id payload) order-id)]
         {:type :broker/order-canceled
          :account/id account-id
-         :order-id order-id
+         :order-id (->order-id canceled-order-id)
          :date date})
 
       :expired
