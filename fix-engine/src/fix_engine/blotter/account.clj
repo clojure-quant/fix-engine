@@ -33,7 +33,7 @@
     (log (assoc event :account/id account-id))))
 
 (defmethod p/create-trade-account :fix-trade
-  [account order-rdv update-rdv log]
+  [_ctx account order-rdv update-rdv log]
   (let [account (assoc account :account/session :fix)
         {:keys [account/id]} account
         req-rdv (m/rdv)
