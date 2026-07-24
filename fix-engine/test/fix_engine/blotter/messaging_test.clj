@@ -48,7 +48,22 @@
                             asset-converter)]
     (is (= :new-order-single msg-type))
     (is (= :market (:ord-type payload)))
-    (is (nil? (:price payload)))))
+    (is (nil? (:price payload)))
+    (is (nil? (:pos-maint-rpt-id payload)))))
+
+(deftest blotter-new-order-with-position-id->fix-payload-test
+  (let [[msg-type payload] (tm/blotter-order->fix-payload
+                            {:type :trader/new-order
+                             :account/id 5292473
+                             :order-id "ord-close"
+                             :asset "EURUSD"
+                             :side :sell
+                             :order-type :market
+                             :qty 1000M
+                             :position-id "221427182"}
+                            asset-converter)]
+    (is (= :new-order-single msg-type))
+    (is (= "221427182" (:pos-maint-rpt-id payload)))))
 
 (deftest blotter-limit-order-requires-limit-test
   (is (thrown-with-msg? clojure.lang.ExceptionInfo
@@ -121,10 +136,13 @@
                                  :price 1.05M
                                  :exec-type :new
                                  :ord-status :new
+                                 :pos-maint-rpt-id "223948512"
                                  :transact-time (t/instant)}])]
     (is (= :broker/order-confirmed (:type msg)))
     (is (= :limit (:order-type msg)))
     (is (= 1.05M (:limit msg)))
+    (is (= "223948512" (:position-id msg)))
+    (is (nil? (:message msg)))
     (valid-broker? msg)))
 
 (deftest execution-report-confirmed-market-test
@@ -153,9 +171,26 @@
                                 :ord-status :filled
                                 :last-qty 1000M
                                 :last-px 1.051M
+                                :pos-maint-rpt-id "221427183"
                                 :transact-time (t/instant)}])]
     (is (= :broker/order-filled (:type msg)))
     (is (re-find #"^__" (:fill-id msg)))
+    (is (= "221427183" (:position-id msg)))
+    (valid-broker? msg)))
+
+(deftest execution-report-filled-without-position-id-test
+  (let [msg (tm/fix-payload->blotter-update
+             5292473 asset-converter
+             [:execution-report {:cl-ord-id "ord-1"
+                                :symbol "1"
+                                :side :buy
+                                :exec-type :trade
+                                :ord-status :filled
+                                :last-qty 1000M
+                                :last-px 1.051M
+                                :transact-time (t/instant)}])]
+    (is (= :broker/order-filled (:type msg)))
+    (is (nil? (:position-id msg)))
     (valid-broker? msg)))
 
 (deftest execution-report-rejected-test
@@ -376,3 +411,27 @@
                               :transact-time (t/instant "2026-06-11T00:22:07.158Z")
                               :side :buy
                               :price 1.05M}]))))
+
+(deftest position-report->blotter-with-position-id-test
+  (let [msg (tm/fix-payload->blotter-update
+             1000 asset-converter
+             [:position-report {:symbol "1"
+                                :pos-req-id "pos-req-1"
+                                :pos-maint-rpt-id "221436915"
+                                :total-num-pos-reports 1
+                                :pos-req-result :valid-request
+                                :settl-price 1.16395M
+                                :no-positions [{:long-qty 1000M :short-qty 0M}]}])]
+    (is (= :broker/positions-item (:type msg)))
+    (is (= "EURUSD" (:asset msg)))
+    (is (= "221436915" (:position-id msg)))
+    (is (= "pos-req-1" (:req-id msg)))))
+
+(deftest position-report->blotter-without-position-id-test
+  (let [msg (tm/fix-payload->blotter-update
+             1000 asset-converter
+             [:position-report {:pos-req-id "pos-req-1"
+                                :total-num-pos-reports 0
+                                :pos-req-result :no-positions}])]
+    (is (= :broker/positions-item (:type msg)))
+    (is (nil? (:position-id msg)))))

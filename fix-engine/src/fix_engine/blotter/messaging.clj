@@ -64,7 +64,7 @@
   ([order asset-converter]
    (blotter-order->fix-payload order asset-converter nil nil))
   ([order asset-converter cancel-req-atom modify-req-atom]
-   (let [{:keys [type order-id asset side qty limit order-type account/id req-id]} order]
+   (let [{:keys [type order-id asset side qty limit order-type account/id req-id position-id]} order]
      (case type
        :trader/new-order
        (let [_ (validate-order-type order-type limit)
@@ -75,7 +75,9 @@
                                      :transact-time (t/instant)
                                      :order-qty (->decimal qty)
                                      :ord-type order-type}]
-           (= :limit order-type) (update 1 assoc :price (->decimal limit))))
+           (= :limit order-type) (update 1 assoc :price (->decimal limit))
+           ;; Hedging: FIX tag 721 PosMaintRptID — attach order to existing position.
+           position-id (update 1 assoc :pos-maint-rpt-id (->order-id position-id))))
 
        :trader/cancel-order
        (let [oid (->order-id order-id)
@@ -128,9 +130,10 @@
                    :side (:side payload)
                    :qty (->decimal (:order-qty payload))
                    :order-type order-type
-                   :date date
-                   :message (or (:text payload) "")}
-            (= :limit order-type) (assoc :limit (->decimal (:price payload))))))
+                   :date date}
+            (= :limit order-type) (assoc :limit (->decimal (:price payload)))
+            (:pos-maint-rpt-id payload) (assoc :position-id (:pos-maint-rpt-id payload))
+            (seq (:text payload)) (assoc :message (:text payload)))))
 
       :order-status ;; partial response to a position-report request
       (when (and asset order-id)
@@ -148,20 +151,22 @@
                    :cum-qty (->decimal (:cum-qty payload))
                    :broker-order-id (:order-id payload)}
             (= :limit order-type) (assoc :limit (->decimal (:price payload)))
-            (:message payload) (assoc :message (:message payload)))))
+            (:message payload) (assoc :message (:message payload))
+            (:pos-maint-rpt-id payload) (assoc :position-id (:pos-maint-rpt-id payload)))))
 
-      ;; execution
+      ;; execution / fill
       :trade
       (when (and asset order-id)
-        {:type :broker/order-filled
-         :account/id account-id
-         :order-id order-id
-         :fill-id (or (:exec-id payload) (synthetic-fill-id))
-         :date date
-         :asset asset
-         :qty (->decimal (or (:last-qty payload) (:order-qty payload)))
-         :side (:side payload)
-         :price (->decimal (or (:last-px payload) (:avg-px payload) (:price payload)))})
+        (cond-> {:type :broker/order-filled
+                 :account/id account-id
+                 :order-id order-id
+                 :fill-id (or (:exec-id payload) (synthetic-fill-id))
+                 :date date
+                 :asset asset
+                 :qty (->decimal (or (:last-qty payload) (:order-qty payload)))
+                 :side (:side payload)
+                 :price (->decimal (or (:last-px payload) (:avg-px payload) (:price payload)))}
+          (:pos-maint-rpt-id payload) (assoc :position-id (:pos-maint-rpt-id payload))))
 
       ;; rejection
       :rejected
@@ -271,14 +276,14 @@
   (let [{:keys [symbol pos-req-id no-positions settl-price total-num-pos-reports pos-maint-rpt-id]} payload
         asset (when symbol
                 (am/from-api asset-converter symbol))]
-    {:type :broker/positions-item
-     :account/id account-id
-     :req-id pos-req-id
-     :asset asset
-     :position no-positions
-     :position-id pos-maint-rpt-id
-     :settl-price settl-price
-     :total total-num-pos-reports}))
+    (cond-> {:type :broker/positions-item
+             :account/id account-id
+             :req-id pos-req-id
+             :asset asset
+             :position no-positions
+             :settl-price settl-price
+             :total total-num-pos-reports}
+      pos-maint-rpt-id (assoc :position-id pos-maint-rpt-id))))
 
 (defn fix-payload->blotter-update
   "fix-translator [msg-type payload] -> blotter broker message or nil."
