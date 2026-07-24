@@ -3,6 +3,7 @@
    [clojure.test :refer [deftest is]]
    [tick.core :as t]
    [quanta.blotter.oms.validation.schema :as schema]
+   [quanta.blotter.protocol :as p]
    [fix-translator.session :refer [create-session fix-msg-vec->payload]]
    [fix-engine.impl.asset-converter :refer [set-asset-list]]
    [quanta.asset.mapper :refer [create-asset-mapper]]
@@ -77,14 +78,37 @@
                          asset-converter))))
 
 (deftest blotter-cancel-order->fix-payload-test
-  (let [[msg-type payload] (tm/blotter-order->fix-payload
+  (let [cancel-req-atom (atom {})
+        [msg-type payload] (tm/blotter-order->fix-payload
                             {:type :trader/cancel-order
                              :account/id 5292473
                              :order-id "ord-1"}
-                            asset-converter)]
+                            asset-converter
+                            cancel-req-atom
+                            nil)]
     (is (= :order-cancel-request msg-type))
     (is (= "ord-1" (:orig-cl-ord-id payload)))
-    (is (string? (:cl-ord-id payload)))))
+    (is (string? (:cl-ord-id payload)))
+    (is (= "ord-1" (get @cancel-req-atom (:cl-ord-id payload))))))
+
+(deftest blotter-modify-order->fix-payload-test
+  (let [modify-req-atom (atom {})
+        [msg-type payload] (tm/blotter-order->fix-payload
+                            {:type :trader/modify-order
+                             :account/id 5292473
+                             :order-id "ord-1"
+                             :asset "EURUSD"
+                             :qty 3000M
+                             :limit 1.06M}
+                            asset-converter
+                            nil
+                            modify-req-atom)]
+    (is (= :order-cancel-replace-request msg-type))
+    (is (= "ord-1" (:orig-cl-ord-id payload)))
+    (is (= 3000M (:order-qty payload)))
+    (is (= 1.06M (:price payload)))
+    (is (= {:order-id "ord-1" :asset "EURUSD" :qty 3000M :limit 1.06M}
+           (get @modify-req-atom (:cl-ord-id payload))))))
 
 (deftest execution-report-confirmed-test
   (let [msg (tm/fix-payload->blotter-update
@@ -164,8 +188,10 @@
              5292473 asset-converter
              [:order-cancel-reject {:orig-cl-ord-id "ord-1"
                                     :cl-ord-id "cxl-1"
+                                    :cxl-rej-response-to :order-cancel-request
                                     :text "unknown order"}])]
     (is (= :broker/cancel-rejected (:type msg)))
+    (is (= "ord-1" (:order-id msg)))
     (valid-broker? msg)))
 
 (deftest business-message-reject-with-ref-id-test
@@ -178,6 +204,74 @@
     (is (= "ord-1" (:order-id msg)))
     (is (= "bad symbol" (:message msg)))
     (valid-broker? msg)))
+
+(deftest business-message-reject-cancel-req-maps-to-cancel-rejected-test
+  (let [cancel-req-atom (atom {"nijXEbL_" "_Jt1mH"})
+        msg (tm/fix-payload->blotter-update
+             1000 asset-converter cancel-req-atom (atom {})
+             [:business-message-reject
+              {:text "ORDER_NOT_FOUND:Order with clientOrderId=_Jt1mH not found."
+               :business-reject-ref-id "nijXEbL_"
+               :business-reject-reason :other}])]
+    (is (= :broker/cancel-rejected (:type msg)))
+    (is (= "_Jt1mH" (:order-id msg)))
+    (is (= "ORDER_NOT_FOUND:Order with clientOrderId=_Jt1mH not found." (:message msg)))
+    (is (empty? @cancel-req-atom))
+    (valid-broker? msg)))
+
+(deftest business-message-reject-modify-req-maps-to-modify-rejected-test
+  (let [modify-req-atom (atom {"mod-req-1" {:order-id "ord-1" :asset "EURUSD" :qty 3000M :limit 1.06M}})
+        msg (tm/fix-payload->blotter-update
+             1000 asset-converter (atom {}) modify-req-atom
+             [:business-message-reject
+              {:text "modify failed"
+               :business-reject-ref-id "mod-req-1"
+               :business-reject-reason :other}])]
+    (is (= :broker/modify-rejected (:type msg)))
+    (is (= "ord-1" (:order-id msg)))
+    (is (empty? @modify-req-atom))
+    (valid-broker? msg)))
+
+(deftest execution-report-replace-test
+  (let [modify-req-atom (atom {"mod-req-1" {:order-id "ord-1" :asset "EURUSD" :qty 3000M :limit 1.06M}})
+        msg (tm/fix-payload->blotter-update
+             1000 asset-converter (atom {}) modify-req-atom
+             [:execution-report {:cl-ord-id "mod-req-1"
+                                 :orig-cl-ord-id "ord-1"
+                                 :symbol "1"
+                                 :side :buy
+                                 :order-qty 3000M
+                                 :price 1.06M
+                                 :exec-type :replace
+                                 :ord-status :replaced
+                                 :transact-time (t/instant)}])]
+    (is (= :broker/order-modified (:type msg)))
+    (is (= "ord-1" (:order-id msg)))
+    (is (= "EURUSD" (:asset msg)))
+    (is (= 3000M (:qty msg)))
+    (is (= 1.06M (:limit msg)))
+    (is (empty? @modify-req-atom))
+    (valid-broker? msg)))
+
+(deftest create-trade-messaging-cancel-reject-roundtrip-test
+  (let [messaging (p/create-trade-messaging
+                   {:account/id 1000 :account/api :fix-trade}
+                   asset-converter
+                   (fn [_]))
+        [_cancel-type cancel-payload]
+        (p/api-order messaging {:type :trader/cancel-order
+                                :account/id 1000
+                                :order-id "_Jt1mH"
+                                :asset "EURUSD"})
+        reject (p/blotter-order-update
+                messaging
+                [:business-message-reject
+                 {:text "ORDER_NOT_FOUND:Order with clientOrderId=_Jt1mH not found."
+                  :business-reject-ref-id (:cl-ord-id cancel-payload)
+                  :business-reject-reason :other}])]
+    (is (= :broker/cancel-rejected (:type reject)))
+    (is (= "_Jt1mH" (:order-id reject)))
+    (valid-broker? reject)))
 
 (deftest business-message-reject-market-closed-test
   (let [reject-text "MARKET_CLOSED:Trading is not available: Market is closed."
