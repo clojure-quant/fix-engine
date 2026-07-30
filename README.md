@@ -14,3 +14,9 @@ clj -X:cli-quote-print
 clojure -X:cli-trade :account :pepperstone-ctrader-trade-ssl
 clojure -X:cli-trade-blotter
 
+
+## ctrader fix accounts
+
+- pepperstone
+- fxpro
+- tradeviewmarkets
