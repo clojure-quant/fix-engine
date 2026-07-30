@@ -388,35 +388,33 @@
     (valid-broker? msg)))
 
 (deftest execution-report-order-status-test
-  (is (= {:type :broker/order-status
-          :account/id 1000
-          :order-id "fix-1"
-          :asset "EURUSD"
-          :side :buy
-          :qty 1000M
-          :order-type :limit
-          :limit 1.05M
-          :date (t/inst "2026-06-11T00:22:07.158Z")
-          :time-in-force :good-till-cancel
-          :leaves-qty 1000M
-          :cum-qty 0M
-          :broker-order-id "343556096"}
-         (tm/fix-payload->blotter-update
-          1000 asset-converter
-          [:execution-report {:ord-type :limit
-                              :time-in-force :good-till-cancel
-                              :symbol "1"
-                              :leaves-qty 1000M
-                              :cl-ord-id "fix-1"
-                              :ord-status :new
-                              :order-qty 1000M
-                              :exec-type :order-status
-                              :order-id "343556096"
-                              :mass-status-req-id "working-orders-req-1"
-                              :cum-qty 0M
-                              :transact-time (t/inst "2026-06-11T00:22:07.158Z")
-                              :side :buy
-                              :price 1.05M}]))))
+  (let [msg (tm/fix-payload->blotter-update
+             1000 asset-converter
+             [:execution-report {:ord-type :limit
+                                 :time-in-force :good-till-cancel
+                                 :symbol "1"
+                                 :leaves-qty 1000M
+                                 :cl-ord-id "fix-1"
+                                 :ord-status :new
+                                 :order-qty 1000M
+                                 :exec-type :order-status
+                                 :order-id "343556096"
+                                 :cum-qty 0M
+                                 :transact-time (t/inst "2026-06-11T00:22:07.158Z")
+                                 :side :buy
+                                 :price 1.05M}])]
+    (is (= :broker/order-status (:type msg)))
+    (is (= "fix-1" (:order-id msg)))
+    (is (= "EURUSD" (:asset msg)))
+    (is (= :buy (:side msg)))
+    (is (= 1000M (:qty msg)))
+    (is (= :limit (:order-type msg)))
+    (is (= 1.05M (:limit msg)))
+    (is (= :good-till-cancel (:time-in-force msg)))
+    (is (= 1000M (:leaves-qty msg)))
+    (is (= 0M (:cum-qty msg)))
+    (is (= "343556096" (:broker-order-id msg)))
+    (is (inst? (:date msg)))))
 
 (deftest position-report->blotter-with-position-id-test
   (let [msg (tm/fix-payload->blotter-update
@@ -441,3 +439,218 @@
                                 :pos-req-result :no-positions}])]
     (is (= :broker/positions-item (:type msg)))
     (is (nil? (:position-id msg)))))
+
+(defn- position-report
+  ([req-id position-id total symbol]
+   (position-report req-id position-id total symbol
+                    {:long-qty 1000M :short-qty 0M}))
+  ([req-id position-id total symbol position]
+   [:position-report
+    (cond-> {:symbol symbol
+             :pos-req-id req-id
+             :total-num-pos-reports total
+             :pos-req-result :valid-request
+             :settl-price 1.1M
+             :no-positions [position]}
+      position-id (assoc :pos-maint-rpt-id position-id))]))
+
+(deftest create-trade-messaging-open-positions-roundtrip-test
+  (let [messaging (p/create-trade-messaging
+                   {:account/id 1000 :account/api :fix-trade}
+                   asset-converter
+                   (fn [_]))
+        request [:request-for-positions {:pos-req-id "positions-1"}]]
+    (is (= request
+           (p/api-order messaging
+                        {:type :trader/open-positions
+                         :account/id 1000
+                         :req-id "positions-1"})))
+    (is (nil? (p/blotter-order-update
+               messaging
+               (position-report "positions-1" "position-1" 2 "1"))))
+    (let [snapshot (p/blotter-order-update
+                    messaging
+                    (position-report "positions-1" "position-2" 2 "2"))]
+      (is (= :broker/open-positions (:type snapshot)))
+      (is (= 1000 (:account/id snapshot)))
+      (is (= "positions-1" (:req-id snapshot)))
+      (is (inst? (:date snapshot)))
+      (is (= [{:position/account 1000
+               :position/asset "EURUSD"
+               :position/side :long
+               :position/qty-entry 1000M
+               :position/qty-exit 0M
+               :position/qty-open 1000M
+               :position/hedge true
+               :position/average-entry-price 1.1M
+               :position/avg-exit-price nil
+               :position/realized-pl 0M
+               :position/date-open nil
+               :position/date-close nil
+               :position/position-id "position-1"}
+              {:position/account 1000
+               :position/asset "GBPUSD"
+               :position/side :long
+               :position/qty-entry 1000M
+               :position/qty-exit 0M
+               :position/qty-open 1000M
+               :position/hedge true
+               :position/average-entry-price 1.1M
+               :position/avg-exit-price nil
+               :position/realized-pl 0M
+               :position/date-open nil
+               :position/date-close nil
+               :position/position-id "position-2"}]
+             (:positions snapshot)))
+      (is (empty? @(:position-report-atom messaging))))))
+
+(deftest concurrent-open-position-requests-are-isolated-test
+  (let [messaging (p/create-trade-messaging
+                   {:account/id 1000 :account/api :fix-trade}
+                   asset-converter
+                   (fn [_]))]
+    (doseq [req-id ["positions-1" "positions-2"]]
+      (p/api-order messaging
+                   {:type :trader/open-positions
+                    :account/id 1000
+                    :req-id req-id}))
+    (let [second-snapshot
+          (p/blotter-order-update
+           messaging
+           (position-report "positions-2" "position-2" 1 "2"))]
+      (is (= "positions-2" (:req-id second-snapshot)))
+      (is (contains? @(:position-report-atom messaging) "positions-1"))
+      (is (not (contains? @(:position-report-atom messaging) "positions-2"))))))
+
+(deftest non-hedged-short-position-test
+  (let [messaging (p/create-trade-messaging
+                   {:account/id 1000 :account/api :fix-trade}
+                   asset-converter
+                   (fn [_]))
+        _ (p/api-order messaging
+                       {:type :trader/open-positions
+                        :account/id 1000
+                        :req-id "positions-1"})
+        snapshot (p/blotter-order-update
+                  messaging
+                  (position-report "positions-1" nil 1 "1"
+                                   {:long-qty 0M :short-qty 5000M}))
+        position (first (:positions snapshot))]
+    (is (= :short (:position/side position)))
+    (is (= 5000M (:position/qty-entry position)))
+    (is (= 5000M (:position/qty-open position)))
+    (is (false? (:position/hedge position)))
+    (is (not (contains? position :position/position-id)))))
+
+(deftest zero-open-positions-test
+  (let [messaging (p/create-trade-messaging
+                   {:account/id 1000 :account/api :fix-trade}
+                   asset-converter
+                   (fn [_]))
+        _ (p/api-order messaging
+                       {:type :trader/open-positions
+                        :account/id 1000
+                        :req-id "positions-1"})
+        snapshot (p/blotter-order-update
+                  messaging
+                  [:position-report {:pos-req-id "positions-1"
+                                     :total-num-pos-reports 0
+                                     :pos-req-result :no-positions}])]
+    (is (= [] (:positions snapshot)))))
+
+(deftest rejects-ambiguous-position-quantity-test
+  (let [messaging (p/create-trade-messaging
+                   {:account/id 1000 :account/api :fix-trade}
+                   asset-converter
+                   (fn [_]))
+        _ (p/api-order messaging
+                       {:type :trader/open-positions
+                        :account/id 1000
+                        :req-id "positions-1"})]
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"exactly one positive quantity"
+         (p/blotter-order-update
+          messaging
+          (position-report "positions-1" "position-1" 1 "1"
+                           {:long-qty 1000M :short-qty 1000M}))))))
+
+(defn- mass-status-report
+  [req-id total cl-ord-id broker-order-id symbol]
+  [:execution-report
+   {:ord-type :limit
+    :time-in-force :good-till-cancel
+    :symbol symbol
+    :leaves-qty 1000M
+    :cl-ord-id cl-ord-id
+    :ord-status :new
+    :order-qty 1000M
+    :exec-type :order-status
+    :order-id broker-order-id
+    :mass-status-req-id req-id
+    :tot-num-reports total
+    :cum-qty 0M
+    :avg-px 0M
+    :transact-time (t/inst "2026-06-11T00:22:07.158Z")
+    :side :buy
+    :price 1.05M}])
+
+(deftest create-trade-messaging-working-orders-roundtrip-test
+  (let [messaging (p/create-trade-messaging
+                   {:account/id 1000 :account/api :fix-trade}
+                   asset-converter
+                   (fn [_]))
+        request [:order-mass-status-request
+                 {:mass-status-req-id "orders-1"
+                  :mass-status-req-type :status-for-all-orders}]]
+    (is (= request
+           (p/api-order messaging
+                        {:type :trader/working-orders
+                         :account/id 1000
+                         :req-id "orders-1"})))
+    (is (nil? (p/blotter-order-update
+               messaging
+               (mass-status-report "orders-1" 2 "fix-1" "broker-1" "1"))))
+    (let [snapshot (p/blotter-order-update
+                    messaging
+                    (mass-status-report "orders-1" 2 "fix-1" "broker-2" "2"))]
+      (is (= :broker/working-orders (:type snapshot)))
+      (is (= 1000 (:account/id snapshot)))
+      (is (= "orders-1" (:req-id snapshot)))
+      (is (inst? (:date snapshot)))
+      (is (= ["fix-1" "fix-1"] (mapv :order/id (:orders snapshot))))
+      (is (= ["EURUSD" "GBPUSD"] (mapv :order/asset (:orders snapshot))))
+      (is (every? #(= :working (:order/status %)) (:orders snapshot)))
+      (is (every? #(not (contains? % :req-id)) (:orders snapshot)))
+      (is (every? #(not (contains? % :total)) (:orders snapshot)))
+      (is (empty? @(:order-report-atom messaging)))
+      (valid-broker? snapshot))))
+
+(deftest empty-working-orders-via-business-reject-test
+  (let [messaging (p/create-trade-messaging
+                   {:account/id 1000 :account/api :fix-trade}
+                   asset-converter
+                   (fn [_]))
+        _ (p/api-order messaging
+                       {:type :trader/working-orders
+                        :account/id 1000
+                        :req-id "orders-1"})
+        snapshot (p/blotter-order-update
+                  messaging
+                  [:business-message-reject
+                   {:business-reject-ref-id "orders-1"
+                    :business-reject-reason :other
+                    :text "NO_ORDERS"}])]
+    (is (= {:type :broker/working-orders
+            :account/id 1000
+            :req-id "orders-1"
+            :orders []}
+           (dissoc snapshot :date)))
+    (is (inst? (:date snapshot)))
+    (is (empty? @(:order-report-atom messaging)))
+    (valid-broker? snapshot)))
+
+(deftest mass-status-partials-are-suppressed-without-pending-request-test
+  (is (nil? (tm/fix-payload->blotter-update
+             1000 asset-converter
+             (mass-status-report "orders-1" 1 "fix-1" "broker-1" "1")))))

@@ -3,9 +3,12 @@
    [nano-id.core :refer [nano-id]]
    [tick.core :as t]
    [quanta.blotter.protocol :as p]
-   [quanta.asset.mapper :as am])
+   [quanta.asset.mapper :as am]
+   [fix-engine.blotter.position-report :as position-report]
+   [fix-engine.blotter.order-report :as order-report])
   (:import [java.math BigDecimal]
-           [java.time Instant]))
+           [java.time Instant]
+           [java.util Date]))
 
 (defn- ->decimal [x]
   (cond
@@ -15,13 +18,13 @@
     (string? x) (bigdec x)
     :else (bigdec (str x))))
 
-(defn- ->inst [x]
+(defn- ->date [x]
   (cond
-    (nil? x) (t/inst)
-    (inst? x) x
-    (instance? Instant x) (t/inst x)
-    (string? x) (t/inst (Instant/parse x))
-    :else (t/inst)))
+    (nil? x) (Date.)
+    (instance? Date x) x
+    (instance? Instant x) (Date/from x)
+    (string? x) (Date/from (Instant/parse x))
+    :else (Date.)))
 
 (defn- ->order-id [x]
   (if (string? x) x (str x)))
@@ -62,8 +65,13 @@
    Optional `cancel-req-atom` / `modify-req-atom` store client request ids
    (FIX ClOrdID) mapped to blotter order-ids for inbound reject correlation."
   ([order asset-converter]
-   (blotter-order->fix-payload order asset-converter nil nil))
+   (blotter-order->fix-payload order asset-converter nil nil nil nil))
   ([order asset-converter cancel-req-atom modify-req-atom]
+   (blotter-order->fix-payload order asset-converter cancel-req-atom modify-req-atom nil nil))
+  ([order asset-converter cancel-req-atom modify-req-atom position-report-atom]
+   (blotter-order->fix-payload order asset-converter cancel-req-atom modify-req-atom
+                                position-report-atom nil))
+  ([order asset-converter cancel-req-atom modify-req-atom position-report-atom order-report-atom]
    (let [{:keys [type order-id asset side qty limit order-type account/id req-id position-id]} order]
      (case type
        :trader/new-order
@@ -103,21 +111,27 @@
          [:order-cancel-replace-request payload])
 
        :trader/open-positions
-       [:request-for-positions {:pos-req-id req-id}]
+       (let [req-id (->order-id req-id)]
+         (store-pending! position-report-atom req-id
+                         (position-report/create-report-consolidator req-id))
+         [:request-for-positions {:pos-req-id req-id}])
 
        :trader/working-orders
-       [:order-mass-status-request {:mass-status-req-id req-id
-                                    :mass-status-req-type :status-for-all-orders}]
+       (let [req-id (->order-id req-id)]
+         (store-pending! order-report-atom req-id
+                         (order-report/create-report-consolidator req-id))
+         [:order-mass-status-request {:mass-status-req-id req-id
+                                      :mass-status-req-type :status-for-all-orders}])
 
        (throw (ex-info "unsupported blotter order type"
                        {:type type :account/id id}))))))
 
 (defn- execution-report->blotter
-  [account-id asset-converter cancel-req-atom modify-req-atom payload]
+  [account-id asset-converter cancel-req-atom modify-req-atom order-report-atom payload]
   (let [asset (when-let [s (:symbol payload)]
                 (am/from-api asset-converter s))
         order-id (or (:cl-ord-id payload) (:order-id payload))
-        date (->inst (:transact-time payload))
+        date (->date (:transact-time payload))
         exec-type (:exec-type payload)]
     (case exec-type
       :new ;; new order confirmed
@@ -135,24 +149,36 @@
             (:pos-maint-rpt-id payload) (assoc :position-id (:pos-maint-rpt-id payload))
             (seq (:text payload)) (assoc :message (:text payload)))))
 
-      :order-status ;; partial response to a position-report request
-      (when (and asset order-id)
-        (let [order-type (fix-ord-type->order-type (:ord-type payload) (:price payload))]
-          (cond-> {:type :broker/order-status
-                   :account/id account-id
-                   :order-id order-id
-                   :asset asset
-                   :side (:side payload)
-                   :qty (->decimal (:order-qty payload))
-                   :order-type order-type
-                   :date date
-                   :time-in-force (:time-in-force payload)
-                   :leaves-qty (->decimal (:leaves-qty payload))
-                   :cum-qty (->decimal (:cum-qty payload))
-                   :broker-order-id (:order-id payload)}
-            (= :limit order-type) (assoc :limit (->decimal (:price payload)))
-            (:message payload) (assoc :message (:message payload))
-            (:pos-maint-rpt-id payload) (assoc :position-id (:pos-maint-rpt-id payload)))))
+      :order-status ;; mass-status response or standalone status
+      (if-let [mass-req-id (:mass-status-req-id payload)]
+        (when order-report-atom
+          (when-let [consolidator (get @order-report-atom (->order-id mass-req-id))]
+            (let [mapped (order-report/execution-report->order
+                          account-id asset-converter payload)]
+              (when-let [orders (order-report/add-response consolidator mapped)]
+                (swap! order-report-atom dissoc (->order-id mass-req-id))
+                {:type :broker/working-orders
+                 :account/id account-id
+                 :req-id (->order-id mass-req-id)
+                 :date (->date nil)
+                 :orders (mapv #(dissoc % :req-id :total) orders)}))))
+        (when (and asset order-id)
+          (let [order-type (fix-ord-type->order-type (:ord-type payload) (:price payload))]
+            (cond-> {:type :broker/order-status
+                     :account/id account-id
+                     :order-id order-id
+                     :asset asset
+                     :side (:side payload)
+                     :qty (->decimal (:order-qty payload))
+                     :order-type order-type
+                     :date date
+                     :time-in-force (:time-in-force payload)
+                     :leaves-qty (->decimal (:leaves-qty payload))
+                     :cum-qty (->decimal (:cum-qty payload))
+                     :broker-order-id (:order-id payload)}
+              (= :limit order-type) (assoc :limit (->decimal (:price payload)))
+              (:message payload) (assoc :message (:message payload))
+              (:pos-maint-rpt-id payload) (assoc :position-id (:pos-maint-rpt-id payload))))))
 
       ;; execution / fill
       :trade
@@ -221,27 +247,36 @@
       fallback))
 
 (defn- business-message-reject->blotter
-  [account-id cancel-req-atom modify-req-atom payload]
+  [account-id cancel-req-atom modify-req-atom order-report-atom payload]
   (when-let [ref-id (:business-reject-ref-id payload)]
     (let [msg (reject-message-text payload "business message rejected")
-          date (t/inst)]
-      (if-let [order-id (take-pending! cancel-req-atom ref-id)]
-        {:type :broker/cancel-rejected
-         :account/id account-id
-         :order-id (->order-id order-id)
-         :date date
-         :message msg}
-        (if-let [pending (take-pending! modify-req-atom ref-id)]
-          {:type :broker/modify-rejected
+          date (->date nil)
+          req-id (->order-id ref-id)]
+      (if (and order-report-atom (contains? @order-report-atom req-id))
+        (do
+          (swap! order-report-atom dissoc req-id)
+          {:type :broker/working-orders
            :account/id account-id
-           :order-id (->order-id (:order-id pending))
+           :req-id req-id
+           :date date
+           :orders []})
+        (if-let [order-id (take-pending! cancel-req-atom ref-id)]
+          {:type :broker/cancel-rejected
+           :account/id account-id
+           :order-id (->order-id order-id)
            :date date
            :message msg}
-          {:type :broker/order-rejected
-           :account/id account-id
-           :order-id (->order-id ref-id)
-           :date date
-           :message msg})))))
+          (if-let [pending (take-pending! modify-req-atom ref-id)]
+            {:type :broker/modify-rejected
+             :account/id account-id
+             :order-id (->order-id (:order-id pending))
+             :date date
+             :message msg}
+            {:type :broker/order-rejected
+             :account/id account-id
+             :order-id req-id
+             :date date
+             :message msg}))))))
 
 (defn- order-cancel-reject->blotter
   [account-id cancel-req-atom modify-req-atom payload]
@@ -264,7 +299,7 @@
                              (when-not modify?
                                (:order-id (take-pending! modify-req-atom req-id))))
         order-id (or (:orig-cl-ord-id payload) pending-order-id req-id)
-        date (t/inst)]
+        date (->date nil)]
     (when order-id
       (if modify?
         {:type :broker/modify-rejected
@@ -291,30 +326,100 @@
              :total total-num-pos-reports}
       pos-maint-rpt-id (assoc :position-id pos-maint-rpt-id))))
 
+(defn- position-item->position
+  [{:keys [account/id asset position settl-price position-id] :as item}]
+  (let [{:keys [long-qty short-qty]} (first position)
+        long-qty (->decimal long-qty)
+        short-qty (->decimal short-qty)
+        long? (and long-qty (pos? long-qty))
+        short? (and short-qty (pos? short-qty))
+        [side qty] (cond
+                     (and long? (not short?)) [:long long-qty]
+                     (and short? (not long?)) [:short short-qty]
+                     :else
+                     (throw (ex-info "position report requires exactly one positive quantity"
+                                     {:item item})))]
+    (when-not asset
+      (throw (ex-info "position report requires a mapped asset" {:item item})))
+    (when-not settl-price
+      (throw (ex-info "position report requires :settl-price" {:item item})))
+    (cond-> {:position/account id
+             :position/asset asset
+             :position/side side
+             :position/qty-entry qty
+             :position/qty-exit 0M
+             :position/qty-open qty
+             :position/hedge (boolean position-id)
+             :position/average-entry-price (->decimal settl-price)
+             :position/avg-exit-price nil
+             :position/realized-pl 0M
+             :position/date-open nil
+             :position/date-close nil}
+      position-id (assoc :position/position-id (->order-id position-id)))))
+
+(defn- consolidate-position-report
+  [account-id asset-converter position-report-atom payload]
+  (let [item (position-report->blotter account-id asset-converter payload)]
+    (if-not position-report-atom
+      item
+      (let [req-id (->order-id (:req-id item))]
+        (when-let [consolidator (get @position-report-atom req-id)]
+          (when-let [positions (position-report/add-response consolidator item)]
+            (swap! position-report-atom dissoc req-id)
+            {:type :broker/open-positions
+             :account/id account-id
+             :req-id req-id
+             :date (->date nil)
+             :positions (mapv position-item->position positions)}))))))
+
 (defn fix-payload->blotter-update
   "fix-translator [msg-type payload] -> blotter broker message or nil."
   ([account-id asset-converter msg]
-   (fix-payload->blotter-update account-id asset-converter nil nil msg))
+   (fix-payload->blotter-update account-id asset-converter nil nil nil nil msg))
   ([account-id asset-converter cancel-req-atom modify-req-atom [msg-type payload]]
+   (fix-payload->blotter-update account-id asset-converter
+                                cancel-req-atom modify-req-atom nil nil
+                                [msg-type payload]))
+  ([account-id asset-converter cancel-req-atom modify-req-atom position-report-atom
+    [msg-type payload]]
+   (fix-payload->blotter-update account-id asset-converter
+                                cancel-req-atom modify-req-atom position-report-atom nil
+                                [msg-type payload]))
+  ([account-id asset-converter cancel-req-atom modify-req-atom position-report-atom
+    order-report-atom [msg-type payload]]
    (case msg-type
      :execution-report
-     (execution-report->blotter account-id asset-converter cancel-req-atom modify-req-atom payload)
+     (execution-report->blotter account-id asset-converter
+                                cancel-req-atom modify-req-atom order-report-atom payload)
      :business-message-reject
-     (business-message-reject->blotter account-id cancel-req-atom modify-req-atom payload)
+     (business-message-reject->blotter account-id cancel-req-atom modify-req-atom
+                                       order-report-atom payload)
      :order-cancel-reject
      (order-cancel-reject->blotter account-id cancel-req-atom modify-req-atom payload)
      :position-report
-     (position-report->blotter account-id asset-converter payload)
+     (consolidate-position-report account-id asset-converter position-report-atom payload)
      nil)))
 
-(defrecord trade-messaging-fix [account asset-converter log cancel-req-atom modify-req-atom]
+(defrecord trade-messaging-fix
+           [account asset-converter log cancel-req-atom modify-req-atom
+            position-report-atom order-report-atom]
   p/trade-messaging
-  (api-order [{:keys [asset-converter cancel-req-atom modify-req-atom]} blotter-msg-in]
-    (blotter-order->fix-payload blotter-msg-in asset-converter cancel-req-atom modify-req-atom))
-  (blotter-order-update [{:keys [account asset-converter cancel-req-atom modify-req-atom]} api-msg-in]
+  (api-order [{:keys [asset-converter cancel-req-atom modify-req-atom
+                      position-report-atom order-report-atom]}
+              blotter-msg-in]
+    (blotter-order->fix-payload blotter-msg-in asset-converter
+                                cancel-req-atom modify-req-atom
+                                position-report-atom order-report-atom))
+  (blotter-order-update
+    [{:keys [account asset-converter cancel-req-atom modify-req-atom
+             position-report-atom order-report-atom]}
+     api-msg-in]
     (fix-payload->blotter-update (:account/id account) asset-converter
-                                 cancel-req-atom modify-req-atom api-msg-in)))
+                                 cancel-req-atom modify-req-atom
+                                 position-report-atom order-report-atom
+                                 api-msg-in)))
 
 (defmethod p/create-trade-messaging :fix-trade
   [account asset-converter log]
-  (trade-messaging-fix. account asset-converter log (atom {}) (atom {})))
+  (trade-messaging-fix. account asset-converter log
+                        (atom {}) (atom {}) (atom {}) (atom {})))

@@ -1,0 +1,9 @@
+[{:asset/symbol "EURUSD"
+  :asset/currency "USD"
+  :asset/name "Euro / US Dollar"
+  :asset/exchange "FX"
+  :asset/category :fx
+  :asset/market :forex
+  :asset/margin 5
+  :asset/price-point 0.0001M
+  :asset/quantity-step 1000M}]

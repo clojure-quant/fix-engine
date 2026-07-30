@@ -1,4 +1,4 @@
-{:paths ["src"]
+{:paths ["src" "resources"]
  :deps {org.clojure/clojure    {:mvn/version "1.11.1"}
         io.github.clojure-quant/fix-engine {:local/root "../fix-engine" :deps/manifest :deps}}
  :aliases
@@ -8,5 +8,13 @@
   
   :quote-print {:exec-fn demo.cli-quote-print/start-cli}
   :blotter-trade {:exec-fn demo.cli-trade-blotter/start-cli}
+  :account-status
+  {:extra-deps {org.pinkgorilla/modular {:mvn/version "0.5.81"}}
+   :exec-fn modular.system/start!
+   :exec-args {:config ["config-account-status.edn"]
+               :services "services-account-status.edn"
+               :profile "default"
+               :version "prod1"
+               :run demo.account-status/run}}
   :lint {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2024.11.14"}}
          :main-opts ["-m" "clj-kondo.main" "--fail-level" "error" "--lint" "src"]}}}

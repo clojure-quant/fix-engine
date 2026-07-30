@@ -1,0 +1,20 @@
+{:timbre/clj
+ {:min-level [[#{"*"} :info]]
+  :appenders {:default {:type :console-color}}}
+
+ :db {:dir "account-status-db"}
+
+ :db-seed {:accounts-file "blotter-accounts.edn"
+           :assets-file "account-status-assets.edn"
+           :lists-dir "account-status-lists"}
+
+ :oms-server
+ {:ns-require [fix-engine.blotter.account]
+  :transaction-log-file "log-account-status/oms-server-transaction.txt"
+  :account-log-dir "log-account-status/oms-account"
+  :text-logger {:print-enabled true
+                :log-file "log-account-status/oms-server-trading-state.txt"
+                :interval-ms 5000}
+  :validate? true
+  :tag? true
+  :db-enabled false}}
