@@ -43,7 +43,7 @@
         header (assoc (:header config)
                       :msg-type (header-msg-type session msg-type)
                       :msg-seq-num seq-num
-                      :sending-time (t/instant))
+                      :sending-time (t/inst))
         fix-message {:header header :payload payload}]
     (encode-message decoder fix-message)))
 

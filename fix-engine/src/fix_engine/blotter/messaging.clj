@@ -15,13 +15,13 @@
     (string? x) (bigdec x)
     :else (bigdec (str x))))
 
-(defn- ->instant [x]
+(defn- ->inst [x]
   (cond
-    (nil? x) (t/instant)
-    (instance? Instant x) x
-    (inst? x) (.toInstant ^java.util.Date x)
-    (string? x) (Instant/parse x)
-    :else (t/instant)))
+    (nil? x) (t/inst)
+    (inst? x) x
+    (instance? Instant x) (t/inst x)
+    (string? x) (t/inst (Instant/parse x))
+    :else (t/inst)))
 
 (defn- ->order-id [x]
   (if (string? x) x (str x)))
@@ -72,7 +72,7 @@
          (cond-> [:new-order-single {:cl-ord-id (->order-id order-id)
                                      :symbol symbol-id
                                      :side side
-                                     :transact-time (t/instant)
+                                     :transact-time (t/inst)
                                      :order-qty (->decimal qty)
                                      :ord-type order-type}]
            (= :limit order-type) (update 1 assoc :price (->decimal limit))
@@ -117,7 +117,7 @@
   (let [asset (when-let [s (:symbol payload)]
                 (am/from-api asset-converter s))
         order-id (or (:cl-ord-id payload) (:order-id payload))
-        date (->instant (:transact-time payload))
+        date (->inst (:transact-time payload))
         exec-type (:exec-type payload)]
     (case exec-type
       :new ;; new order confirmed
@@ -208,6 +208,7 @@
                    :account/id account-id
                    :order-id (->order-id blotter-order-id)
                    :asset asset*
+                   :date date
                    :message (or (:text payload) "order modified")}
             qty* (assoc :qty qty*)
             limit* (assoc :limit limit*))))
@@ -223,16 +224,18 @@
   [account-id cancel-req-atom modify-req-atom payload]
   (when-let [ref-id (:business-reject-ref-id payload)]
     (let [msg (reject-message-text payload "business message rejected")
-          date (t/instant)]
+          date (t/inst)]
       (if-let [order-id (take-pending! cancel-req-atom ref-id)]
         {:type :broker/cancel-rejected
          :account/id account-id
          :order-id (->order-id order-id)
+         :date date
          :message msg}
         (if-let [pending (take-pending! modify-req-atom ref-id)]
           {:type :broker/modify-rejected
            :account/id account-id
            :order-id (->order-id (:order-id pending))
+           :date date
            :message msg}
           {:type :broker/order-rejected
            :account/id account-id
@@ -260,16 +263,19 @@
                              (when modify? (take-pending! cancel-req-atom req-id))
                              (when-not modify?
                                (:order-id (take-pending! modify-req-atom req-id))))
-        order-id (or (:orig-cl-ord-id payload) pending-order-id req-id)]
+        order-id (or (:orig-cl-ord-id payload) pending-order-id req-id)
+        date (t/inst)]
     (when order-id
       (if modify?
         {:type :broker/modify-rejected
          :account/id account-id
          :order-id (->order-id order-id)
+         :date date
          :message msg}
         {:type :broker/cancel-rejected
          :account/id account-id
          :order-id (->order-id order-id)
+         :date date
          :message msg}))))
 
 (defn- position-report->blotter [account-id asset-converter payload]

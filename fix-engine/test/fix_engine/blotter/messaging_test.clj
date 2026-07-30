@@ -16,8 +16,13 @@
     m))
 
 (defn- valid-broker? [msg]
-  (is (schema/validate-message msg)
-      (str "invalid broker message: " (schema/human-error-message msg))))
+  (is (inst? (:date msg))
+      (str "broker :date must be java.util.Date: " msg))
+  (let [schema-msg (if (schema/validate-message msg)
+                     msg
+                     (update msg :date t/instant))]
+    (is (schema/validate-message schema-msg)
+        (str "invalid broker message: " (schema/human-error-message schema-msg)))))
 
 (deftest blotter-new-order->fix-payload-test
   (let [[msg-type payload] (tm/blotter-order->fix-payload
@@ -34,6 +39,7 @@
     (is (= "ord-1" (:cl-ord-id payload)))
     (is (= "1" (:symbol payload)))
     (is (= :limit (:ord-type payload)))
+    (is (inst? (:transact-time payload)))
     (is (= 1.05M (:price payload)))))
 
 (deftest blotter-new-market-order->fix-payload-test
@@ -155,7 +161,7 @@
                                  :ord-type :market
                                  :exec-type :new
                                  :ord-status :new
-                                 :transact-time (t/instant)}])]
+                                 :transact-time (t/inst)}])]
     (is (= :broker/order-confirmed (:type msg)))
     (is (= :market (:order-type msg)))
     (is (nil? (:limit msg)))
@@ -172,7 +178,7 @@
                                 :last-qty 1000M
                                 :last-px 1.051M
                                 :pos-maint-rpt-id "221427183"
-                                :transact-time (t/instant)}])]
+                                :transact-time (t/inst)}])]
     (is (= :broker/order-filled (:type msg)))
     (is (re-find #"^__" (:fill-id msg)))
     (is (= "221427183" (:position-id msg)))
@@ -188,7 +194,7 @@
                                 :ord-status :filled
                                 :last-qty 1000M
                                 :last-px 1.051M
-                                :transact-time (t/instant)}])]
+                                :transact-time (t/inst)}])]
     (is (= :broker/order-filled (:type msg)))
     (is (nil? (:position-id msg)))
     (valid-broker? msg)))
@@ -201,7 +207,7 @@
                                 :exec-type :rejected
                                 :ord-status :rejected
                                 :text "bad order"
-                                :transact-time (t/instant)}])]
+                                :transact-time (t/inst)}])]
     (is (= :broker/order-rejected (:type msg)))
     (valid-broker? msg)))
 
@@ -213,7 +219,7 @@
                                 :symbol "1"
                                 :exec-type :canceled
                                 :ord-status :canceled
-                                :transact-time (t/instant)}])]
+                                :transact-time (t/inst)}])]
     (is (= :broker/order-canceled (:type msg)))
     (is (= "ord-1" (:order-id msg)))
     (valid-broker? msg)))
@@ -279,7 +285,7 @@
                                  :price 1.06M
                                  :exec-type :replace
                                  :ord-status :replaced
-                                 :transact-time (t/instant)}])]
+                                 :transact-time (t/inst)}])]
     (is (= :broker/order-modified (:type msg)))
     (is (= "ord-1" (:order-id msg)))
     (is (= "EURUSD" (:asset msg)))
@@ -363,7 +369,7 @@
             :side :buy
             :symbol "1"
             :time-in-force :good-till-cancel
-            :transact-time (t/instant "2026-07-01T18:33:15.604Z")
+            :transact-time (t/inst "2026-07-01T18:33:15.604Z")
             :exec-type :canceled
             :leaves-qty 10000M
             :pos-maint-rpt-id "229582264"}
@@ -390,7 +396,7 @@
           :qty 1000M
           :order-type :limit
           :limit 1.05M
-          :date (t/instant "2026-06-11T00:22:07.158Z")
+          :date (t/inst "2026-06-11T00:22:07.158Z")
           :time-in-force :good-till-cancel
           :leaves-qty 1000M
           :cum-qty 0M
@@ -408,7 +414,7 @@
                               :order-id "343556096"
                               :mass-status-req-id "working-orders-req-1"
                               :cum-qty 0M
-                              :transact-time (t/instant "2026-06-11T00:22:07.158Z")
+                              :transact-time (t/inst "2026-06-11T00:22:07.158Z")
                               :side :buy
                               :price 1.05M}]))))
 
